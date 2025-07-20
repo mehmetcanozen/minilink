@@ -3,3 +3,5 @@ instructions
 .env.development
 .env.production
 .cursorignore
+dist
+reviews
