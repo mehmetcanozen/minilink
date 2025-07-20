@@ -1,0 +1,5 @@
+node_modules
+instructions
+.env.development
+.env.production
+.cursorignore
