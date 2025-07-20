@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - MiniLink</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <!-- Meta Tags -->
+    <meta name="description" content="Fast, reliable, and secure URL shortening service">
+    <meta name="keywords" content="url shortener, link shortener, short url, tiny url">
+    <meta name="author" content="MiniLink">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="<%= title %> - MiniLink">
+    <meta property="og:description" content="Fast, reliable, and secure URL shortening service">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<%= typeof baseUrl !== 'undefined' ? baseUrl : 'http://localhost:3000' %>">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <nav class="navbar">
+                <a href="/" class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-link"></i>
+                    </div>
+                    MiniLink
+                </a>
+                
+                <ul class="nav-links">
+                    <li>
+                        <a href="/" class="nav-link <%= currentPage === 'home' ? 'active' : '' %>">
+                            <i class="fas fa-home"></i>
+                            Home
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/dashboard" class="nav-link <%= currentPage === 'stats' ? 'active' : '' %>">
+                            <i class="fas fa-chart-bar"></i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/api" class="nav-link">
+                            <i class="fas fa-code"></i>
+                            API
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <%- body %>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <div class="logo">
+                        <div class="logo-icon">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        MiniLink
+                    </div>
+                    <p style="margin-top: 0.5rem; color: var(--gray-400);">
+                        Fast, reliable, and secure URL shortening service
+                    </p>
+                </div>
+                
+                <div class="footer-links">
+                    <a href="/health" class="footer-link">
+                        <i class="fas fa-heart-pulse"></i>
+                        Health
+                    </a>
+                    <a href="/api" class="footer-link">
+                        <i class="fas fa-info-circle"></i>
+                        API
+                    </a>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--gray-700); color: var(--gray-500); font-size: 0.875rem;">
+                © 2024 MiniLink. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/main.js"></script>
+</body>
+</html> 

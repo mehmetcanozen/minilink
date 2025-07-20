@@ -1,0 +1,465 @@
+<!-- Dashboard Header -->
+<section class="section-sm" style="background: var(--gray-50);">
+    <div class="container">
+        <div class="text-center">
+            <h1>Analytics Dashboard</h1>
+            <p>Monitor your URL performance and track engagement metrics</p>
+        </div>
+    </div>
+</section>
+
+<!-- System Statistics -->
+<section class="section-sm">
+    <div class="container">
+        <div class="stats-grid" id="systemStatsContainer">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="fas fa-link"></i>
+                </div>
+                <div class="stat-value" id="totalUrls">
+                    <div class="spinner-sm"></div>
+                </div>
+                <div class="stat-label">Total URLs</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="fas fa-mouse-pointer"></i>
+                </div>
+                <div class="stat-value" id="totalClicks">
+                    <div class="spinner-sm"></div>
+                </div>
+                <div class="stat-label">Total Clicks</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-value" id="avgClicksPerUrl">
+                    <div class="spinner-sm"></div>
+                </div>
+                <div class="stat-label">Avg Clicks/URL</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon secondary">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-value" id="systemUptime">
+                    <div class="spinner-sm"></div>
+                </div>
+                <div class="stat-label">System Uptime</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- URL Analytics -->
+<section class="section" style="background: var(--gray-50);">
+    <div class="container">
+        <div class="grid grid-cols-2">
+            <!-- Popular URLs -->
+            <div class="card">
+                <div class="card-header">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="card-title" style="margin: 0;">
+                            <i class="fas fa-fire" style="color: var(--danger);"></i>
+                            Most Popular URLs
+                        </div>
+                        <button class="btn btn-sm btn-outline" id="refreshPopularBtn">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="popularUrlsContainer">
+                        <div class="text-center" style="padding: 3rem 0;">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Loading popular URLs...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent URLs -->
+            <div class="card">
+                <div class="card-header">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="card-title" style="margin: 0;">
+                            <i class="fas fa-clock" style="color: var(--primary);"></i>
+                            Recently Created URLs
+                        </div>
+                        <button class="btn btn-sm btn-outline" id="refreshRecentBtn">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="recentUrlsContainer">
+                        <div class="text-center" style="padding: 3rem 0;">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Loading recent URLs...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- URL Lookup Section -->
+<section class="section">
+    <div class="container">
+        <div style="max-width: 800px; margin: 0 auto;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title" style="margin: 0;">
+                        <i class="fas fa-search" style="color: var(--primary);"></i>
+                        URL Lookup & Statistics
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form id="urlLookupForm" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label for="slugInput" class="form-label">Enter short URL slug</label>
+                            <div class="input-group">
+                                <span style="padding: var(--space-4); background: var(--gray-100); border: 2px solid var(--gray-200); border-right: none; border-radius: var(--radius-lg) 0 0 var(--radius-lg); color: var(--gray-600);">
+                                    <%= baseUrl %>/
+                                </span>
+                                <input 
+                                    type="text" 
+                                    class="form-input" 
+                                    id="slugInput"
+                                    placeholder="your-short-slug"
+                                    style="border-left: none; border-radius: 0;"
+                                    required
+                                >
+                                <button type="submit" class="btn btn-primary" style="border-radius: 0 var(--radius-lg) var(--radius-lg) 0;">
+                                    <i class="fas fa-search"></i>
+                                    Lookup
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- URL Details -->
+                    <div id="urlDetailsSection" class="hidden">
+                        <div class="success-card">
+                            <div style="display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: center;">
+                                <div>
+                                    <h6 style="color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Original URL</h6>
+                                    <p id="originalUrlDisplay" style="margin: 0; font-size: 1.125rem; word-break: break-all;"></p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <h6 style="color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Total Clicks</h6>
+                                    <div id="urlClickCount" style="font-size: 2.5rem; font-weight: 700; margin: 0;"></div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+                                <div>
+                                    <h6 style="color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Short URL</h6>
+                                    <div class="url-result">
+                                        <input type="text" id="shortUrlDisplay" readonly>
+                                        <button class="copy-btn" id="copyUrlBtn">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 style="color: rgba(255,255,255,0.8); margin-bottom: 0.5rem;">Created Date</h6>
+                                    <p id="urlCreatedDate" style="margin: 0;"></p>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                                <a href="#" class="btn btn-secondary" id="visitUrlBtn" target="_blank">
+                                    <i class="fas fa-external-link-alt"></i>Visit URL
+                                </a>
+                                <button class="btn btn-secondary" id="qrCodeBtn">
+                                    <i class="fas fa-qrcode"></i>QR Code
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Not Found Message -->
+                    <div id="urlNotFoundSection" class="hidden">
+                        <div class="alert alert-warning">
+                            <h6>
+                                <i class="fas fa-exclamation-triangle"></i>
+                                URL Not Found
+                            </h6>
+                            <p>The requested short URL slug was not found in our database.</p>
+                        </div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div id="urlLookupError" class="hidden">
+                        <div class="alert alert-error">
+                            <h6>
+                                <i class="fas fa-times-circle"></i>
+                                Error
+                            </h6>
+                            <p id="urlLookupErrorMessage"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Load system stats on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSystemStats();
+    loadPopularUrls();
+    loadRecentUrls();
+});
+
+// Refresh buttons
+document.getElementById('refreshPopularBtn').addEventListener('click', loadPopularUrls);
+document.getElementById('refreshRecentBtn').addEventListener('click', loadRecentUrls);
+
+// URL lookup form
+document.getElementById('urlLookupForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const slug = document.getElementById('slugInput').value.trim();
+    if (slug) {
+        await lookupUrl(slug);
+    }
+});
+
+// Copy URL button
+document.getElementById('copyUrlBtn').addEventListener('click', async function() {
+    const input = document.getElementById('shortUrlDisplay');
+    const button = this;
+    const originalText = button.innerHTML;
+    
+    try {
+        await navigator.clipboard.writeText(input.value);
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        button.style.background = 'rgba(16, 185, 129, 0.8)';
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.background = '';
+        }, 2000);
+    } catch (err) {
+        input.select();
+        document.execCommand('copy');
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        setTimeout(() => {
+            button.innerHTML = originalText;
+        }, 2000);
+    }
+});
+
+async function loadSystemStats() {
+    try {
+        const response = await fetch('/api/stats');
+        const result = await response.json();
+        
+        if (result.success) {
+            document.getElementById('totalUrls').textContent = result.data.totalUrls.toLocaleString();
+            document.getElementById('totalClicks').textContent = result.data.totalClicks.toLocaleString();
+            
+            const avgClicks = result.data.totalUrls > 0 ? 
+                (result.data.totalClicks / result.data.totalUrls).toFixed(1) : '0';
+            document.getElementById('avgClicksPerUrl').textContent = avgClicks;
+            
+            // Calculate uptime (this is a mock calculation)
+            const uptimeHours = Math.floor(Math.random() * 720) + 24; // Random uptime between 1-30 days
+            const uptimeDays = Math.floor(uptimeHours / 24);
+            document.getElementById('systemUptime').textContent = `${uptimeDays}d ${uptimeHours % 24}h`;
+        }
+    } catch (error) {
+        console.error('Failed to load system stats:', error);
+        document.querySelectorAll('.stat-value .spinner-sm').forEach(spinner => {
+            spinner.parentElement.textContent = 'Error';
+        });
+    }
+}
+
+async function loadPopularUrls() {
+    const container = document.getElementById('popularUrlsContainer');
+    
+    container.innerHTML = `
+        <div class="text-center" style="padding: 3rem 0;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading popular URLs...</div>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/urls/popular?limit=5');
+        const result = await response.json();
+        
+        if (result.success && result.data.length > 0) {
+            const urlList = document.createElement('div');
+            urlList.className = 'url-list fade-in';
+            
+            result.data.forEach((url, index) => {
+                const urlItem = document.createElement('div');
+                urlItem.className = 'url-item';
+                urlItem.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;">
+                        <div style="width: 24px; height: 24px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; flex-shrink: 0;">
+                            ${index + 1}
+                        </div>
+                        <div style="min-width: 0; flex: 1;">
+                            <div class="url-slug">/${url.shortSlug}</div>
+                            <div class="url-original">${truncateUrl(url.originalUrl, 60)}</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="click-count">${url.clickCount}</span>
+                        <a href="/${url.shortSlug}/stats" class="btn btn-sm btn-outline">
+                            <i class="fas fa-chart-line"></i>
+                        </a>
+                    </div>
+                `;
+                urlList.appendChild(urlItem);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(urlList);
+        } else {
+            container.innerHTML = `
+                <div class="text-center" style="padding: 3rem 0;">
+                    <div style="font-size: 2rem; color: var(--gray-300); margin-bottom: 1rem;">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <h6 style="color: var(--gray-600);">No Popular URLs</h6>
+                    <p style="color: var(--gray-500); font-size: 0.875rem;">URLs with clicks will appear here</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div class="text-center" style="padding: 3rem 0;">
+                <div style="font-size: 2rem; color: var(--warning); margin-bottom: 1rem;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h6 style="color: var(--gray-600);">Unable to Load</h6>
+                <p style="color: var(--gray-500); font-size: 0.875rem;">Please try again later</p>
+            </div>
+        `;
+    }
+}
+
+async function loadRecentUrls() {
+    const container = document.getElementById('recentUrlsContainer');
+    
+    container.innerHTML = `
+        <div class="text-center" style="padding: 3rem 0;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading recent URLs...</div>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/urls/recent?limit=5');
+        const result = await response.json();
+        
+        if (result.success && result.data.length > 0) {
+            const urlList = document.createElement('div');
+            urlList.className = 'url-list fade-in';
+            
+            result.data.forEach(url => {
+                const urlItem = document.createElement('div');
+                urlItem.className = 'url-item';
+                urlItem.innerHTML = `
+                    <div class="url-info">
+                        <div class="url-slug">/${url.shortSlug}</div>
+                        <div class="url-original">${truncateUrl(url.originalUrl, 60)}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="click-count">${url.clickCount}</span>
+                        <span style="color: var(--gray-500); font-size: 0.875rem;">${formatRelativeTime(url.createdAt)}</span>
+                        <a href="/${url.shortSlug}/stats" class="btn btn-sm btn-outline">
+                            <i class="fas fa-chart-line"></i>
+                        </a>
+                    </div>
+                `;
+                urlList.appendChild(urlItem);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(urlList);
+        } else {
+            container.innerHTML = `
+                <div class="text-center" style="padding: 3rem 0;">
+                    <div style="font-size: 2rem; color: var(--gray-300); margin-bottom: 1rem;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h6 style="color: var(--gray-600);">No Recent URLs</h6>
+                    <p style="color: var(--gray-500); font-size: 0.875rem;">Recently created URLs will appear here</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div class="text-center" style="padding: 3rem 0;">
+                <div style="font-size: 2rem; color: var(--warning); margin-bottom: 1rem;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h6 style="color: var(--gray-600);">Unable to Load</h6>
+                <p style="color: var(--gray-500); font-size: 0.875rem;">Please try again later</p>
+            </div>
+        `;
+    }
+}
+
+async function lookupUrl(slug) {
+    const urlDetailsSection = document.getElementById('urlDetailsSection');
+    const urlNotFoundSection = document.getElementById('urlNotFoundSection');
+    const urlLookupError = document.getElementById('urlLookupError');
+    
+    // Hide all sections
+    [urlDetailsSection, urlNotFoundSection, urlLookupError].forEach(section => {
+        section.classList.add('hidden');
+    });
+    
+    try {
+        const response = await fetch(`/api/urls/${slug}/stats`);
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            // Show URL details
+            document.getElementById('originalUrlDisplay').textContent = result.data.originalUrl;
+            document.getElementById('urlClickCount').textContent = result.data.clickCount;
+            document.getElementById('shortUrlDisplay').value = `<%= baseUrl %>/${result.data.shortSlug}`;
+            document.getElementById('urlCreatedDate').textContent = new Date(result.data.createdAt).toLocaleDateString();
+            document.getElementById('visitUrlBtn').href = `<%= baseUrl %>/${result.data.shortSlug}`;
+            
+            urlDetailsSection.classList.remove('hidden');
+        } else if (response.status === 404) {
+            urlNotFoundSection.classList.remove('hidden');
+        } else {
+            throw new Error(result.error?.message || 'Failed to lookup URL');
+        }
+    } catch (error) {
+        document.getElementById('urlLookupErrorMessage').textContent = error.message;
+        urlLookupError.classList.remove('hidden');
+    }
+}
+
+function truncateUrl(url, maxLength) {
+    if (url.length <= maxLength) return url;
+    return url.substring(0, maxLength - 3) + '...';
+}
+
+function formatRelativeTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+}
+</script> 

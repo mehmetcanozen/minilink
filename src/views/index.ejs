@@ -1,0 +1,318 @@
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <h1>Shorten Your URLs Instantly</h1>
+        <p>Transform long, complicated URLs into short, shareable links in seconds. Track clicks, generate QR codes, and manage your links with our powerful analytics.</p>
+    </div>
+</section>
+
+<!-- URL Shortener Form -->
+<section class="section-sm">
+    <div class="container">
+        <div class="url-form">
+            <form id="shortenForm">
+                <div class="form-group">
+                    <label for="originalUrl" class="form-label">Enter your long URL</label>
+                    <div class="input-group">
+                        <input 
+                            type="url" 
+                            name="originalUrl"
+                            id="originalUrl" 
+                            class="form-input" 
+                            placeholder="https://example.com/very-long-url-that-needs-shortening"
+                            required
+                        >
+                        <button type="submit" id="shortenBtn" class="btn btn-primary btn-lg">
+                            <span class="btn-text">
+                                <i class="fas fa-magic me-2"></i>Shorten URL
+                            </span>
+                        </button>
+                    </div>
+                </div>
+                <p style="color: var(--gray-500); font-size: 0.875rem; margin: 0;">
+                    Free forever • No registration required • Instant results
+                </p>
+            </form>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="hidden text-center" style="padding: 2rem 0;">
+                <div class="spinner"></div>
+                <div class="loading-text">Creating your short URL...</div>
+            </div>
+
+            <!-- Success State -->
+            <div id="resultSection" class="hidden">
+                <div class="success-card">
+                    <h3>
+                        <i class="fas fa-check-circle"></i>
+                        Your short URL is ready!
+                    </h3>
+                    <div class="url-result">
+                        <input type="text" id="shortUrl" readonly>
+                        <button class="copy-btn" id="copyBtn">
+                            <i class="fas fa-copy"></i>
+                            Copy
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+                        <a href="#" id="visitLink" class="btn btn-secondary" target="_blank">
+                            <i class="fas fa-external-link-alt"></i>
+                            Visit Link
+                        </a>
+                        <a href="#" id="statsLink" class="btn btn-secondary">
+                            <i class="fas fa-chart-line"></i>
+                            View Stats
+                        </a>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <small class="text-muted">
+                            <span id="clickCount">0</span> clicks • Created <span id="createdDate"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorSection" class="hidden">
+                <div class="alert alert-error">
+                    <h6>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Error
+                    </h6>
+                    <p id="errorMessage"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="section" style="background: var(--gray-50);">
+    <div class="container">
+        <div class="text-center" style="margin-bottom: 4rem;">
+            <h2>Why Choose MiniLink?</h2>
+            <p>Powerful features designed to make URL management effortless and efficient</p>
+        </div>
+        
+        <div class="grid grid-cols-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="stat-icon primary">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h4>Lightning Fast</h4>
+                    <p>Create short URLs in milliseconds with our optimized backend infrastructure and advanced caching.</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="stat-icon success">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h4>Smart Analytics</h4>
+                    <p>Track clicks, monitor performance, and get insights with our comprehensive analytics dashboard.</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h4>Secure & Reliable</h4>
+                    <p>Enterprise-grade security with 99.9% uptime guarantee. Your links are safe and always accessible.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Recent URLs Section -->
+<section class="section" id="recentUrlsSection">
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
+            <div>
+                <h2>Recently Shortened URLs</h2>
+                <p>See what others are shortening</p>
+            </div>
+            <button class="btn btn-outline" id="refreshRecentBtn">
+                <i class="fas fa-sync-alt"></i>
+                Refresh
+            </button>
+        </div>
+        
+        <div id="recentUrlsContainer">
+            <div class="text-center" style="padding: 4rem 0;">
+                <div class="spinner"></div>
+                <div class="loading-text">Loading recent URLs...</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Form handling
+document.getElementById('urlShortenForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const originalUrl = document.getElementById('originalUrl').value;
+    const loadingState = document.getElementById('loadingState');
+    const successState = document.getElementById('successState');
+    const errorState = document.getElementById('errorState');
+    const form = this;
+    
+    // Reset states
+    [loadingState, successState, errorState].forEach(el => el.classList.add('hidden'));
+    loadingState.classList.remove('hidden');
+    
+    try {
+        const response = await fetch('/api/shorten', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ originalUrl })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Show success state
+            document.getElementById('shortUrlResult').value = result.data.shortUrl;
+            document.getElementById('visitLink').href = result.data.shortUrl;
+            document.getElementById('statsLink').href = `/${result.data.shortSlug}/stats`;
+            
+            loadingState.classList.add('hidden');
+            successState.classList.remove('hidden');
+            
+            // Auto-select the URL for easy copying
+            document.getElementById('shortUrlResult').select();
+            
+        } else {
+            throw new Error(result.error?.message || 'Failed to shorten URL');
+        }
+    } catch (error) {
+        loadingState.classList.add('hidden');
+        document.getElementById('errorMessage').textContent = error.message;
+        errorState.classList.remove('hidden');
+    }
+});
+
+// Copy button functionality
+document.getElementById('copyButton').addEventListener('click', async function() {
+    const input = document.getElementById('shortUrlResult');
+    const button = this;
+    const originalText = button.innerHTML;
+    
+    try {
+        await navigator.clipboard.writeText(input.value);
+        button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        button.style.background = 'rgba(16, 185, 129, 0.8)';
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.background = '';
+        }, 2000);
+    } catch (err) {
+        // Fallback for older browsers
+        input.select();
+        document.execCommand('copy');
+        button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+        }, 2000);
+    }
+});
+
+// Load recent URLs on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadRecentUrls();
+});
+
+// Refresh recent URLs
+document.getElementById('refreshRecentBtn').addEventListener('click', function() {
+    loadRecentUrls();
+});
+
+async function loadRecentUrls() {
+    const container = document.getElementById('recentUrlsContainer');
+    
+    // Show loading state
+    container.innerHTML = `
+        <div class="text-center" style="padding: 4rem 0;">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading recent URLs...</div>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/urls/recent?limit=6');
+        const result = await response.json();
+        
+        if (result.success && result.data.length > 0) {
+            const urlList = document.createElement('div');
+            urlList.className = 'url-list fade-in';
+            
+            result.data.forEach(url => {
+                const urlItem = document.createElement('div');
+                urlItem.className = 'url-item';
+                urlItem.innerHTML = `
+                    <div class="url-info">
+                        <div class="url-slug">/${url.shortSlug}</div>
+                        <div class="url-original">${truncateUrl(url.originalUrl, 80)}</div>
+                    </div>
+                    <div class="url-meta">
+                        <span class="click-count">${url.clickCount}</span>
+                        <span>${formatRelativeTime(url.createdAt)}</span>
+                        <a href="/${url.shortSlug}/stats" class="btn btn-sm btn-outline">
+                            <i class="fas fa-chart-line"></i>
+                        </a>
+                    </div>
+                `;
+                urlList.appendChild(urlItem);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(urlList);
+        } else {
+            container.innerHTML = `
+                <div class="text-center" style="padding: 4rem 0;">
+                    <div style="font-size: 3rem; color: var(--gray-300); margin-bottom: 1rem;">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <h4 style="color: var(--gray-600);">No URLs Yet</h4>
+                    <p style="color: var(--gray-500);">Be the first to shorten a URL!</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div class="text-center" style="padding: 4rem 0;">
+                <div style="font-size: 3rem; color: var(--warning); margin-bottom: 1rem;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4 style="color: var(--gray-600);">Unable to Load URLs</h4>
+                <p style="color: var(--gray-500);">Please try again later.</p>
+            </div>
+        `;
+    }
+}
+
+function truncateUrl(url, maxLength) {
+    if (url.length <= maxLength) return url;
+    return url.substring(0, maxLength - 3) + '...';
+}
+
+function formatRelativeTime(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+}
+</script> 
