@@ -4,9 +4,9 @@ import {
   ApiResponse, 
   CreateUrlDto, 
   CreateUrlResponseDto, 
-  InvalidUrlError, 
-  UrlNotFoundError,
-  ErrorResponse 
+  ErrorResponse,
+  InvalidUrlError,
+  UrlNotFoundError
 } from '../types';
 
 export class UrlController {
@@ -23,7 +23,7 @@ export class UrlController {
       const dto = UrlService.validateCreateUrlDto(req.body);
       
       // Get user ID from request (for future authentication)
-      const userId = (req as any).userId; // Will be undefined for now
+      const userId = (req as { userId?: string }).userId; // Will be undefined for now
 
       // Create short URL
       const result = await this.urlService.shortenUrl(dto, userId);
@@ -91,7 +91,7 @@ export class UrlController {
       }
 
       // Send stats response (excluding sensitive information)
-      const response: ApiResponse<any> = {
+      const response: ApiResponse<unknown> = {
         success: true,
         data: {
           id: stats.id,
@@ -116,7 +116,7 @@ export class UrlController {
       const slug = UrlService.validateSlug(req.params.slug);
       
       // Get user ID from request (for future authentication)
-      const userId = (req as any).userId; // Will be undefined for now
+      const userId = (req as { userId?: string }).userId; // Will be undefined for now
 
       // Delete URL
       const deleted = await this.urlService.deleteUrl(slug, userId);
@@ -288,7 +288,7 @@ export class UrlController {
       }
 
       // Get user ID from request (for future authentication)
-      const userId = (req as any).userId; // Will be undefined for now
+      const userId = (req as { userId?: string }).userId; // Will be undefined for now
 
       // Create URLs
       const results = await this.urlService.createMultipleUrls(dtos, userId);

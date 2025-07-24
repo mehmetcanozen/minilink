@@ -34,14 +34,21 @@ export class UrlRepository implements IUrlRepository {
       }
 
       return Url.fromDatabaseRow(result.rows[0]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle unique constraint violation (duplicate slug)
-      if (error.code === '23505' && error.constraint === 'urls_short_slug_key') {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        'constraint' in error &&
+        (error as { code: string; constraint: string }).code === '23505' &&
+        (error as { code: string; constraint: string }).constraint === 'urls_short_slug_key'
+      ) {
         throw new Error(`Short slug '${urlData.shortSlug}' already exists`);
       }
       
       console.error('Error creating URL:', error);
-      throw new Error(`Failed to create URL: ${error.message}`);
+      throw new Error(`Failed to create URL: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -63,9 +70,9 @@ export class UrlRepository implements IUrlRepository {
       }
 
       return Url.fromDatabaseRow(result.rows[0]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error finding URL by slug:', error);
-      throw new Error(`Failed to find URL by slug: ${error.message}`);
+      throw new Error(`Failed to find URL by slug: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -87,9 +94,9 @@ export class UrlRepository implements IUrlRepository {
       }
 
       return Url.fromDatabaseRow(result.rows[0]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error finding URL by ID:', error);
-      throw new Error(`Failed to find URL by ID: ${error.message}`);
+      throw new Error(`Failed to find URL by ID: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -116,9 +123,9 @@ export class UrlRepository implements IUrlRepository {
       }
 
       return Url.fromDatabaseRow(result.rows[0]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error finding URL by original URL:', error);
-      throw new Error(`Failed to find URL by original URL: ${error.message}`);
+      throw new Error(`Failed to find URL by original URL: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -141,9 +148,9 @@ export class UrlRepository implements IUrlRepository {
       if (result.rows.length === 0) {
         throw new Error(`URL with slug '${slug}' not found`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error incrementing click count:', error);
-      throw new Error(`Failed to increment click count: ${error.message}`);
+      throw new Error(`Failed to increment click count: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -165,9 +172,9 @@ export class UrlRepository implements IUrlRepository {
       const result = await client.query(query, [userId, limit, offset]);
       
       return result.rows.map(row => Url.fromDatabaseRow(row));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error finding URLs by user ID:', error);
-      throw new Error(`Failed to find URLs by user ID: ${error.message}`);
+      throw new Error(`Failed to find URLs by user ID: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -181,9 +188,9 @@ export class UrlRepository implements IUrlRepository {
       const result = await client.query(query);
       
       return parseInt(result.rows[0].total, 10);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting total URL count:', error);
-      throw new Error(`Failed to get total URL count: ${error.message}`);
+      throw new Error(`Failed to get total URL count: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -197,9 +204,9 @@ export class UrlRepository implements IUrlRepository {
       const result = await client.query(query);
       
       return parseInt(result.rows[0].total, 10) || 0;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting total click count:', error);
-      throw new Error(`Failed to get total click count: ${error.message}`);
+      throw new Error(`Failed to get total click count: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -219,9 +226,9 @@ export class UrlRepository implements IUrlRepository {
       const result = await client.query(query, [limit]);
       
       return result.rows.map(row => Url.fromDatabaseRow(row));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting popular URLs:', error);
-      throw new Error(`Failed to get popular URLs: ${error.message}`);
+      throw new Error(`Failed to get popular URLs: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -240,9 +247,9 @@ export class UrlRepository implements IUrlRepository {
       const result = await client.query(query, [limit]);
       
       return result.rows.map(row => Url.fromDatabaseRow(row));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting recent URLs:', error);
-      throw new Error(`Failed to get recent URLs: ${error.message}`);
+      throw new Error(`Failed to get recent URLs: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -256,9 +263,9 @@ export class UrlRepository implements IUrlRepository {
       const result = await client.query(query, [id]);
       
       return result.rowCount !== null && result.rowCount > 0;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting URL by ID:', error);
-      throw new Error(`Failed to delete URL: ${error.message}`);
+      throw new Error(`Failed to delete URL: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -272,9 +279,9 @@ export class UrlRepository implements IUrlRepository {
       const result = await client.query(query, [slug]);
       
       return result.rowCount !== null && result.rowCount > 0;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting URL by slug:', error);
-      throw new Error(`Failed to delete URL: ${error.message}`);
+      throw new Error(`Failed to delete URL: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }
@@ -315,10 +322,10 @@ export class UrlRepository implements IUrlRepository {
       
       await client.query('COMMIT');
       return createdUrls;
-    } catch (error: any) {
+    } catch (error: unknown) {
       await client.query('ROLLBACK');
       console.error('Error creating multiple URLs:', error);
-      throw new Error(`Failed to create URLs: ${error.message}`);
+      throw new Error(`Failed to create URLs: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       client.release();
     }

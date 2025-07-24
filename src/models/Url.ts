@@ -36,20 +36,20 @@ export class Url implements UrlEntity {
   }
 
   // Factory method to create instance from database row
-  static fromDatabaseRow(row: any): Url {
+  static fromDatabaseRow(row: Record<string, unknown>): Url {
     return new Url({
-      id: row.id,
-      originalUrl: row.original_url,
-      shortSlug: row.short_slug,
-      clickCount: parseInt(row.click_count, 10),
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-      userId: row.user_id || undefined,
+      id: row.id as string,
+      originalUrl: row.original_url as string,
+      shortSlug: row.short_slug as string,
+      clickCount: parseInt(row.click_count as string, 10),
+      createdAt: new Date(row.created_at as string),
+      updatedAt: new Date(row.updated_at as string),
+      userId: (row.user_id as string) || undefined,
     });
   }
 
   // Convert to database row format
-  toDatabaseRow(): any {
+  toDatabaseRow(): Record<string, unknown> {
     return {
       id: this.id,
       original_url: this.originalUrl,
@@ -175,7 +175,7 @@ export class Url implements UrlEntity {
   }
 
   // Convert to JSON for API responses
-  toJSON(): any {
+  toJSON(): Record<string, unknown> {
     return {
       id: this.id,
       originalUrl: this.originalUrl,

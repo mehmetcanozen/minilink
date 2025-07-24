@@ -117,9 +117,9 @@ export class ViewController {
 }
 
 // Helper function to render partial templates
-async function renderTemplate(template: string, data: any = {}): Promise<string> {
-  const ejs = require('ejs');
-  const path = require('path');
+async function renderTemplate(template: string, data: Record<string, unknown> = {}): Promise<string> {
+  const ejs = await import('ejs');
+  const path = await import('path');
   
   try {
     const templatePath = path.join(__dirname, '../views', `${template}.ejs`);

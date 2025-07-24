@@ -1,4 +1,4 @@
-import { customAlphabet, nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 import { nanoidConfig } from '../config';
 import { SlugGenerationError } from '../types';
 
@@ -177,7 +177,7 @@ export function getSlugConfig() {
  * @param repository Object with a method to check if slug exists
  * @returns Function that checks if a slug exists
  */
-export function createSlugChecker(repository: { findBySlug: (slug: string) => Promise<any> }) {
+export function createSlugChecker(repository: { findBySlug: (slug: string) => Promise<unknown> }) {
   return async (slug: string): Promise<boolean> => {
     try {
       const existing = await repository.findBySlug(slug);

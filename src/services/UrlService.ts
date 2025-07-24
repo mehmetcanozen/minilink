@@ -245,17 +245,20 @@ export class UrlService implements IUrlService {
   }
 
   // URL validation methods for API layer
-  static validateCreateUrlDto(dto: any): CreateUrlDto {
+  static validateCreateUrlDto(dto: unknown): CreateUrlDto {
     if (!dto || typeof dto !== 'object') {
       throw new InvalidUrlError('Request body must be a valid object');
     }
 
-    if (!dto.originalUrl || typeof dto.originalUrl !== 'string') {
+    // Type guard for object with string keys
+    const obj = dto as Record<string, unknown>;
+
+    if (!('originalUrl' in obj) || typeof obj.originalUrl !== 'string') {
       throw new InvalidUrlError('originalUrl is required and must be a string');
     }
 
     // Trim whitespace
-    const originalUrl = dto.originalUrl.trim();
+    const originalUrl = obj.originalUrl.trim();
     
     if (!originalUrl) {
       throw new InvalidUrlError('originalUrl cannot be empty');
@@ -264,12 +267,12 @@ export class UrlService implements IUrlService {
     return { originalUrl };
   }
 
-  static validateSlug(slug: any): string {
+  static validateSlug(slug: unknown): string {
     if (!slug || typeof slug !== 'string') {
       throw new InvalidUrlError('Slug must be a non-empty string');
     }
 
-    const trimmedSlug = slug.trim();
+    const trimmedSlug = (slug as string).trim();
     
     if (!trimmedSlug) {
       throw new InvalidUrlError('Slug cannot be empty');
