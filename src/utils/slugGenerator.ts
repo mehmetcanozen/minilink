@@ -2,8 +2,8 @@ import { customAlphabet } from 'nanoid';
 import { nanoidConfig } from '../config';
 import { SlugGenerationError } from '../types';
 
-// Create a custom nanoid generator with our alphabet and length
-const generateId = customAlphabet(nanoidConfig.alphabet, nanoidConfig.length);
+// Create a custom nanoid generator with our alphabet and size
+const generateId = customAlphabet(nanoidConfig.alphabet, nanoidConfig.size);
 
 // Interface for slug generation options
 interface SlugGenerationOptions {
@@ -142,7 +142,7 @@ export function isValidSlug(slug: string): boolean {
  */
 export function estimateCollisionProbability(existingCount: number): number {
   const alphabetSize = nanoidConfig.alphabet.length;
-  const slugLength = nanoidConfig.length;
+  const slugLength = nanoidConfig.size;
   const totalPossibleSlugs = Math.pow(alphabetSize, slugLength);
   
   // Using birthday paradox approximation
@@ -158,7 +158,7 @@ export function estimateCollisionProbability(existingCount: number): number {
  */
 export function getSlugConfig() {
   const alphabetSize = nanoidConfig.alphabet.length;
-  const slugLength = nanoidConfig.length;
+  const slugLength = nanoidConfig.size;
   const totalPossibleSlugs = Math.pow(alphabetSize, slugLength);
   
   return {
@@ -227,8 +227,8 @@ export function generateReadableSlug(url: string): string {
     }
     
     return slug;
-  } catch (error) {
-    // If URL parsing fails, generate a random slug
+  } catch {
+    // If anything goes wrong, fall back to regular slug
     return generateSlug();
   }
 } 
