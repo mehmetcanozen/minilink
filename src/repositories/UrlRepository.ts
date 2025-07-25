@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool } from 'pg';
 import { UrlRepository as IUrlRepository, UrlEntity } from '../types';
 import { Url } from '../models/Url';
 import { getDatabase } from '../config/database';
@@ -156,6 +156,34 @@ export class UrlRepository implements IUrlRepository {
     }
   }
 
+  // Bulk increment click count by a specific amount
+  async bulkIncrementClickCount(slug: string, incrementAmount: number): Promise<void> {
+    if (incrementAmount <= 0) return;
+
+    const client = await this.pool.connect();
+    
+    try {
+      const query = `
+        UPDATE urls
+        SET click_count = click_count + $2,
+            updated_at = NOW()
+        WHERE short_slug = $1
+        RETURNING *
+      `;
+      
+      const result = await client.query(query, [slug, incrementAmount]);
+      
+      if (result.rows.length === 0) {
+        throw new Error(`URL with slug '${slug}' not found`);
+      }
+    } catch (error: unknown) {
+      console.error('Error bulk incrementing click count:', error);
+      throw new Error(`Failed to bulk increment click count: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      client.release();
+    }
+  }
+
   // Additional utility methods for better functionality
 
   async findByUserId(userId: string, limit: number = 50, offset: number = 0): Promise<UrlEntity[]> {
@@ -255,14 +283,16 @@ export class UrlRepository implements IUrlRepository {
     }
   }
 
-  async deleteById(id: string): Promise<boolean> {
+  async deleteById(id: string): Promise<void> {
     const client = await this.pool.connect();
     
     try {
       const query = 'DELETE FROM urls WHERE id = $1';
       const result = await client.query(query, [id]);
       
-      return result.rowCount !== null && result.rowCount > 0;
+      if (result.rowCount === null || result.rowCount === 0) {
+        throw new Error(`URL with id '${id}' not found`);
+      }
     } catch (error: unknown) {
       console.error('Error deleting URL by ID:', error);
       throw new Error(`Failed to delete URL: ${error instanceof Error ? error.message : String(error)}`);
@@ -271,14 +301,16 @@ export class UrlRepository implements IUrlRepository {
     }
   }
 
-  async deleteBySlug(slug: string): Promise<boolean> {
+  async deleteBySlug(slug: string): Promise<void> {
     const client = await this.pool.connect();
     
     try {
       const query = 'DELETE FROM urls WHERE short_slug = $1';
       const result = await client.query(query, [slug]);
       
-      return result.rowCount !== null && result.rowCount > 0;
+      if (result.rowCount === null || result.rowCount === 0) {
+        throw new Error(`URL with slug '${slug}' not found`);
+      }
     } catch (error: unknown) {
       console.error('Error deleting URL by slug:', error);
       throw new Error(`Failed to delete URL: ${error instanceof Error ? error.message : String(error)}`);
