@@ -7,6 +7,7 @@ export class Url implements UrlEntity {
   clickCount: number;
   createdAt: Date;
   updatedAt: Date;
+  expiresAt?: Date;
   userId?: string;
 
   constructor(data: UrlEntity) {
@@ -16,21 +17,24 @@ export class Url implements UrlEntity {
     this.clickCount = data.clickCount;
     this.createdAt = data.createdAt;
     this.updatedAt = data.updatedAt;
+    this.expiresAt = data.expiresAt;
     this.userId = data.userId;
 
     this.validateUrl();
   }
 
   // Factory method to create a new URL instance
-  static create(originalUrl: string, shortSlug: string, userId?: string): Omit<UrlEntity, 'id' | 'createdAt' | 'updatedAt'> {
+  static create(originalUrl: string, shortSlug: string, userId?: string, expiresAt?: Date): Omit<UrlEntity, 'id' | 'createdAt' | 'updatedAt'> {
     // Validate URL before creating
     Url.validateOriginalUrl(originalUrl);
     Url.validateShortSlug(shortSlug);
+    Url.validateExpirationDate(expiresAt);
 
     return {
       originalUrl: Url.normalizeUrl(originalUrl),
       shortSlug,
       clickCount: 0,
+      expiresAt: expiresAt || undefined,
       userId: userId || undefined,
     };
   }
@@ -44,6 +48,7 @@ export class Url implements UrlEntity {
       clickCount: parseInt(row.click_count as string, 10),
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
+      expiresAt: row.expires_at ? new Date(row.expires_at as string) : undefined,
       userId: (row.user_id as string) || undefined,
     });
   }
@@ -57,6 +62,7 @@ export class Url implements UrlEntity {
       click_count: this.clickCount,
       created_at: this.createdAt,
       updated_at: this.updatedAt,
+      expires_at: this.expiresAt || null,
       user_id: this.userId || null,
     };
   }
@@ -65,6 +71,11 @@ export class Url implements UrlEntity {
   incrementClickCount(): void {
     this.clickCount += 1;
     this.updatedAt = new Date();
+  }
+
+  isExpired(): boolean {
+    if (!this.expiresAt) return false;
+    return new Date() > this.expiresAt;
   }
 
   isOwnedBy(userId?: string): boolean {
@@ -147,6 +158,12 @@ export class Url implements UrlEntity {
     }
   }
 
+  static validateExpirationDate(expiresAt?: Date): void {
+    if (expiresAt && expiresAt < new Date()) {
+      throw new InvalidUrlError('Expiration date cannot be in the past');
+    }
+  }
+
   // Utility method to normalize URL
   static normalizeUrl(url: string): string {
     try {
@@ -168,7 +185,7 @@ export class Url implements UrlEntity {
       }
       
       return parsedUrl.toString();
-    } catch (error) {
+    } catch {
       // If normalization fails, return original URL
       return url;
     }
@@ -183,6 +200,7 @@ export class Url implements UrlEntity {
       clickCount: this.clickCount,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
+      expiresAt: this.expiresAt?.toISOString(),
       userId: this.userId,
     };
   }
