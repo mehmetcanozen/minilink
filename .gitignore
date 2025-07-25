@@ -2,6 +2,9 @@ node_modules
 instructions
 .env.development
 .env.production
+.env
 .cursorignore
 dist
 reviews
+.cursor/
+/generated/prisma
