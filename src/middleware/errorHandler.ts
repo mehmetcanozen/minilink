@@ -1,83 +1,76 @@
 import { Request, Response, NextFunction } from 'express';
-import { InvalidUrlError, UrlNotFoundError, SlugGenerationError, ErrorResponse } from '../types';
+import { InvalidUrlError, UrlNotFoundError, SlugGenerationError, ApiResponse } from '../types';
 
-// Error handling middleware - must be the last middleware
-export function errorHandler(error: Error, req: Request, res: Response, next: NextFunction): void {
-  console.error('Error occurred:', {
-    error: error.message,
-    stack: error.stack,
-    url: req.url,
-    method: req.method,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-  });
+// Error handling middleware
+export function errorHandler(err: Error, req: Request, res: Response): void {
+  console.error('Error:', err);
 
-  // Handle known application errors
-  if (error instanceof InvalidUrlError) {
-    const response: ErrorResponse = {
+  // Handle custom errors
+  if (err instanceof InvalidUrlError) {
+    const response: ApiResponse<null> = {
       success: false,
       error: {
         code: 'INVALID_URL',
-        message: error.message,
+        message: err.message,
       },
     };
     res.status(400).json(response);
     return;
   }
 
-  if (error instanceof UrlNotFoundError) {
-    const response: ErrorResponse = {
+  if (err instanceof UrlNotFoundError) {
+    const response: ApiResponse<null> = {
       success: false,
       error: {
         code: 'URL_NOT_FOUND',
-        message: error.message,
+        message: err.message,
       },
     };
     res.status(404).json(response);
     return;
   }
 
-  if (error instanceof SlugGenerationError) {
-    const response: ErrorResponse = {
+  if (err instanceof SlugGenerationError) {
+    const response: ApiResponse<null> = {
       success: false,
       error: {
         code: 'SLUG_GENERATION_ERROR',
-        message: 'Unable to generate unique identifier. Please try again.',
+        message: err.message,
       },
     };
     res.status(500).json(response);
     return;
   }
 
-  // Handle database connection errors
-  if (error.message.includes('Database') || error.message.includes('connection')) {
-    const response: ErrorResponse = {
+  // Handle database errors
+  if (err.message.includes('duplicate key') || err.message.includes('already exists')) {
+    const response: ApiResponse<null> = {
       success: false,
       error: {
-        code: 'DATABASE_ERROR',
-        message: 'Service temporarily unavailable. Please try again later.',
+        code: 'DUPLICATE_ERROR',
+        message: 'Resource already exists',
       },
     };
-    res.status(503).json(response);
+    res.status(409).json(response);
     return;
   }
 
-  // Handle authorization errors
-  if (error.message.includes('Unauthorized')) {
-    const response: ErrorResponse = {
+  // Handle unauthorized errors
+  if (err.message.includes('Unauthorized')) {
+    const response: ApiResponse<null> = {
       success: false,
       error: {
         code: 'UNAUTHORIZED',
-        message: error.message,
+        message: 'Unauthorized access',
       },
     };
-    res.status(403).json(response);
+    res.status(401).json(response);
     return;
   }
 
-  // Handle rate limiting errors (for future implementation)
-  if (error.message.includes('Rate limit')) {
-    const response: ErrorResponse = {
+  // Handle rate limiting errors
+  if (err.message.includes('Too many requests')) {
+    const response: ApiResponse<null> = {
       success: false,
       error: {
         code: 'RATE_LIMITED',
@@ -89,33 +82,31 @@ export function errorHandler(error: Error, req: Request, res: Response, next: Ne
   }
 
   // Default server error
-  const response: ErrorResponse = {
+  const response: ApiResponse<null> = {
     success: false,
     error: {
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unexpected error occurred. Please try again later.',
+      code: 'INTERNAL_ERROR',
+      message: 'Internal server error',
     },
   };
-
   res.status(500).json(response);
 }
 
-// Not found middleware - for routes that don't exist
+// 404 handler for unmatched routes
 export function notFoundHandler(req: Request, res: Response): void {
-  const response: ErrorResponse = {
+  const response: ApiResponse<null> = {
     success: false,
     error: {
-      code: 'ROUTE_NOT_FOUND',
+      code: 'NOT_FOUND',
       message: `Route ${req.method} ${req.path} not found`,
     },
   };
-
   res.status(404).json(response);
 }
 
-// Async error wrapper - wraps async route handlers to catch errors
-export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>) {
-  return (req: Request, res: Response, next: NextFunction) => {
+// Async handler wrapper to catch errors in async route handlers
+export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<void>) {
+  return (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 } 

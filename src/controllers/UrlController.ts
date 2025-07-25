@@ -1,34 +1,29 @@
 import { Request, Response, NextFunction } from 'express';
 import { UrlService } from '../services/UrlService';
-import { 
-  ApiResponse, 
-  CreateUrlDto, 
-  CreateUrlResponseDto, 
-  ErrorResponse,
-  InvalidUrlError,
-  UrlNotFoundError
-} from '../types';
+import { CreateUrlDto, CreateUrlResponseDto, ApiResponse, ErrorResponse } from '../types';
 
 export class UrlController {
-  private urlService: UrlService;
+  constructor(private urlService: UrlService) {}
 
-  constructor(urlService: UrlService) {
-    this.urlService = urlService;
+  // Bind methods to preserve 'this' context
+  bindMethods(): UrlController {
+    this.createShortUrl = this.createShortUrl.bind(this);
+    this.redirectToOriginalUrl = this.redirectToOriginalUrl.bind(this);
+    this.getUrlStats = this.getUrlStats.bind(this);
+    this.deleteUrl = this.deleteUrl.bind(this);
+    this.getPopularUrls = this.getPopularUrls.bind(this);
+    this.getRecentUrls = this.getRecentUrls.bind(this);
+    this.getSystemStats = this.getSystemStats.bind(this);
+    this.createMultipleUrls = this.createMultipleUrls.bind(this);
+    return this;
   }
 
-  // POST /shorten - Create a short URL
   async createShortUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      // Validate request body
-      const dto = UrlService.validateCreateUrlDto(req.body);
-      
-      // Get user ID from request (for future authentication)
-      const userId = (req as { userId?: string }).userId; // Will be undefined for now
+      const dto = this.validateCreateUrlDto(req.body);
 
-      // Create short URL
-      const result = await this.urlService.shortenUrl(dto, userId);
+      const result = await this.urlService.shortenUrl(dto);
 
-      // Send success response
       const response: ApiResponse<CreateUrlResponseDto> = {
         success: true,
         data: result,
@@ -40,67 +35,29 @@ export class UrlController {
     }
   }
 
-  // GET /:slug - Redirect to original URL
   async redirectToOriginalUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      // Validate slug parameter
-      const slug = UrlService.validateSlug(req.params.slug);
+      const slug = this.validateSlug(req.params.slug);
+      const userAgent = req.get('User-Agent');
+      const ip = req.ip || req.connection.remoteAddress || 'unknown';
 
-      // Get redirect information
-      const redirectInfo = await this.urlService.redirectUrl(slug);
+      const redirectInfo = await this.urlService.redirectUrl(slug, userAgent, ip);
 
-      if (!redirectInfo) {
-        // URL not found
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: {
-            code: 'URL_NOT_FOUND',
-            message: `Short URL '${slug}' not found`,
-          },
-        };
-        res.status(404).json(errorResponse);
-        return;
-      }
-
-      // Perform redirect
-      res.redirect(302, redirectInfo.originalUrl);
+      res.redirect(redirectInfo.originalUrl);
     } catch (error) {
       next(error);
     }
   }
 
-  // GET /:slug/stats - Get URL statistics
   async getUrlStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      // Validate slug parameter
-      const slug = UrlService.validateSlug(req.params.slug);
+      const slug = this.validateSlug(req.params.slug);
 
-      // Get URL stats
-      const stats = await this.urlService.getUrlStats(slug);
+      const urlStats = await this.urlService.getUrlStats(slug);
 
-      if (!stats) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: {
-            code: 'URL_NOT_FOUND',
-            message: `Short URL '${slug}' not found`,
-          },
-        };
-        res.status(404).json(errorResponse);
-        return;
-      }
-
-      // Send stats response (excluding sensitive information)
-      const response: ApiResponse<unknown> = {
+      const response: ApiResponse<typeof urlStats> = {
         success: true,
-        data: {
-          id: stats.id,
-          originalUrl: stats.originalUrl,
-          shortSlug: stats.shortSlug,
-          clickCount: stats.clickCount,
-          createdAt: stats.createdAt,
-          // Don't expose userId for privacy
-        },
+        data: urlStats,
       };
 
       res.status(200).json(response);
@@ -109,36 +66,15 @@ export class UrlController {
     }
   }
 
-  // DELETE /:slug - Delete a URL (for future authentication)
   async deleteUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      // Validate slug parameter
-      const slug = UrlService.validateSlug(req.params.slug);
-      
-      // Get user ID from request (for future authentication)
-      const userId = (req as { userId?: string }).userId; // Will be undefined for now
+      const slug = this.validateSlug(req.params.slug);
 
-      // Delete URL
-      const deleted = await this.urlService.deleteUrl(slug, userId);
+      await this.urlService.deleteUrl(slug);
 
-      if (!deleted) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: {
-            code: 'URL_NOT_FOUND',
-            message: `Short URL '${slug}' not found`,
-          },
-        };
-        res.status(404).json(errorResponse);
-        return;
-      }
-
-      // Send success response
-      const response: ApiResponse<{ message: string }> = {
+      const response: ApiResponse<null> = {
         success: true,
-        data: {
-          message: 'URL deleted successfully',
-        },
+        data: null,
       };
 
       res.status(200).json(response);
@@ -147,37 +83,14 @@ export class UrlController {
     }
   }
 
-  // GET /api/urls/popular - Get popular URLs
   async getPopularUrls(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      
-      if (limit > 100) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: {
-            code: 'INVALID_LIMIT',
-            message: 'Limit cannot exceed 100',
-          },
-        };
-        res.status(400).json(errorResponse);
-        return;
-      }
+      const urls = await this.urlService.getPopularUrls(limit);
 
-      const popularUrls = await this.urlService.getPopularUrls(limit);
-
-      // Filter out sensitive information
-      const filteredUrls = popularUrls.map(url => ({
-        id: url.id,
-        originalUrl: url.originalUrl,
-        shortSlug: url.shortSlug,
-        clickCount: url.clickCount,
-        createdAt: url.createdAt,
-      }));
-
-      const response: ApiResponse<typeof filteredUrls> = {
+      const response: ApiResponse<typeof urls> = {
         success: true,
-        data: filteredUrls,
+        data: urls,
       };
 
       res.status(200).json(response);
@@ -186,37 +99,14 @@ export class UrlController {
     }
   }
 
-  // GET /api/urls/recent - Get recent URLs
   async getRecentUrls(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      
-      if (limit > 100) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: {
-            code: 'INVALID_LIMIT',
-            message: 'Limit cannot exceed 100',
-          },
-        };
-        res.status(400).json(errorResponse);
-        return;
-      }
+      const urls = await this.urlService.getRecentUrls(limit);
 
-      const recentUrls = await this.urlService.getRecentUrls(limit);
-
-      // Filter out sensitive information
-      const filteredUrls = recentUrls.map(url => ({
-        id: url.id,
-        originalUrl: url.originalUrl,
-        shortSlug: url.shortSlug,
-        clickCount: url.clickCount,
-        createdAt: url.createdAt,
-      }));
-
-      const response: ApiResponse<typeof filteredUrls> = {
+      const response: ApiResponse<typeof urls> = {
         success: true,
-        data: filteredUrls,
+        data: urls,
       };
 
       res.status(200).json(response);
@@ -225,7 +115,6 @@ export class UrlController {
     }
   }
 
-  // GET /api/stats - Get system statistics
   async getSystemStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const stats = await this.urlService.getSystemStats();
@@ -241,57 +130,46 @@ export class UrlController {
     }
   }
 
-  // POST /api/urls/batch - Create multiple URLs (for future admin features)
   async createMultipleUrls(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!Array.isArray(req.body)) {
-        const errorResponse: ErrorResponse = {
+        const errorResponse: ApiResponse<ErrorResponse> = {
           success: false,
           error: {
-            code: 'INVALID_REQUEST',
             message: 'Request body must be an array of URLs',
+            code: 'INVALID_REQUEST',
           },
         };
         res.status(400).json(errorResponse);
         return;
       }
 
-      if (req.body.length > 50) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: {
-            code: 'TOO_MANY_URLS',
-            message: 'Cannot create more than 50 URLs at once',
-          },
-        };
-        res.status(400).json(errorResponse);
-        return;
-      }
-
-      // Validate each URL in the batch
       const dtos: CreateUrlDto[] = [];
+      const errors: string[] = [];
+
       for (let i = 0; i < req.body.length; i++) {
         try {
-          const dto = UrlService.validateCreateUrlDto(req.body[i]);
+          const dto = this.validateCreateUrlDto(req.body[i]);
           dtos.push(dto);
         } catch (error) {
-          const errorResponse: ErrorResponse = {
-            success: false,
-            error: {
-              code: 'INVALID_URL',
-              message: `Invalid URL at index ${i}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            },
-          };
-          res.status(400).json(errorResponse);
-          return;
+          errors.push(`Item ${i}: ${error instanceof Error ? error.message : 'Invalid URL'}`);
         }
       }
 
-      // Get user ID from request (for future authentication)
-      const userId = (req as { userId?: string }).userId; // Will be undefined for now
+      if (dtos.length === 0) {
+        const errorResponse: ApiResponse<ErrorResponse> = {
+          success: false,
+          error: {
+            message: 'No valid URLs provided',
+            code: 'NO_VALID_URLS',
+            details: { errors },
+          },
+        };
+        res.status(400).json(errorResponse);
+        return;
+      }
 
-      // Create URLs
-      const results = await this.urlService.createMultipleUrls(dtos, userId);
+      const results = await this.urlService.createMultipleUrls(dtos);
 
       const response: ApiResponse<typeof results> = {
         success: true,
@@ -317,18 +195,65 @@ export class UrlController {
     res.status(200).json(response);
   }
 
-  // Bind all methods to ensure proper `this` context
-  bindMethods(): UrlController {
-    this.createShortUrl = this.createShortUrl.bind(this);
-    this.redirectToOriginalUrl = this.redirectToOriginalUrl.bind(this);
-    this.getUrlStats = this.getUrlStats.bind(this);
-    this.deleteUrl = this.deleteUrl.bind(this);
-    this.getPopularUrls = this.getPopularUrls.bind(this);
-    this.getRecentUrls = this.getRecentUrls.bind(this);
-    this.getSystemStats = this.getSystemStats.bind(this);
-    this.createMultipleUrls = this.createMultipleUrls.bind(this);
-    this.healthCheck = this.healthCheck.bind(this);
-    
-    return this;
+  // Validation methods
+  private validateCreateUrlDto(data: unknown): CreateUrlDto {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Request body must be an object');
+    }
+
+    const { originalUrl, userId, expiresAt } = data as Record<string, unknown>;
+
+    if (!originalUrl || typeof originalUrl !== 'string') {
+      throw new Error('originalUrl is required and must be a string');
+    }
+
+    if (originalUrl.trim().length === 0) {
+      throw new Error('originalUrl cannot be empty');
+    }
+
+    // Basic URL validation
+    try {
+      new URL(originalUrl);
+    } catch {
+      throw new Error('originalUrl must be a valid URL');
+    }
+
+    // Validate expiresAt if provided
+    let parsedExpiresAt: Date | undefined;
+    if (expiresAt) {
+      if (typeof expiresAt === 'string') {
+        parsedExpiresAt = new Date(expiresAt);
+        if (isNaN(parsedExpiresAt.getTime())) {
+          throw new Error('expiresAt must be a valid date string');
+        }
+      } else if (expiresAt instanceof Date) {
+        parsedExpiresAt = expiresAt;
+      } else {
+        throw new Error('expiresAt must be a valid date string or Date object');
+      }
+    }
+
+    return {
+      originalUrl: originalUrl.trim(),
+      expiresAt: parsedExpiresAt,
+      userId: userId && typeof userId === 'string' ? userId : undefined,
+    };
+  }
+
+  private validateSlug(slug: string): string {
+    if (!slug || typeof slug !== 'string') {
+      throw new Error('Slug is required and must be a string');
+    }
+
+    if (slug.trim().length === 0) {
+      throw new Error('Slug cannot be empty');
+    }
+
+    // More permissive slug validation (alphanumeric, hyphens, underscores, dots)
+    if (!/^[a-zA-Z0-9._-]+$/.test(slug)) {
+      throw new Error('Slug contains invalid characters');
+    }
+
+    return slug.trim();
   }
 } 

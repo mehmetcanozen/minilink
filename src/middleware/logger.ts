@@ -177,7 +177,7 @@ export function jsonParser(req: Request, res: Response, next: NextFunction): voi
         } else {
           req.body = {};
         }
-      } catch (error) {
+      } catch {
         res.status(400).json({
           success: false,
           error: {
@@ -191,7 +191,7 @@ export function jsonParser(req: Request, res: Response, next: NextFunction): voi
       next();
     });
     
-    req.on('error', (error) => {
+    req.on('error', () => {
       res.status(400).json({
         success: false,
         error: {
