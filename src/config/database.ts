@@ -1,4 +1,4 @@
-import { Pool, Client } from 'pg';
+import { Pool } from 'pg';
 import { databaseConfig } from './index';
 
 class DatabaseConnectionError extends Error {
