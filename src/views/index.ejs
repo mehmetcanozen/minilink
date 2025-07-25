@@ -1,149 +1,388 @@
-<!-- Hero Section -->
+<!-- Hero Section with Enhanced Design -->
 <section class="hero">
     <div class="container">
-        <h1>Shorten Your URLs Instantly</h1>
-        <p>Transform long, complicated URLs into short, shareable links in seconds. Track clicks, generate QR codes, and manage your links with our powerful analytics.</p>
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <span class="gradient-text">Shorten</span> Your URLs 
+                <span class="gradient-text">Instantly</span>
+            </h1>
+            <p class="hero-subtitle">
+                Transform long, complicated URLs into short, shareable links in seconds. 
+                Track clicks, generate QR codes, and manage your links with our powerful analytics.
+            </p>
+            <div class="hero-features">
+                <div class="feature-badge">
+                    <i class="fas fa-bolt"></i>
+                    <span>Lightning Fast</span>
+                </div>
+                <div class="feature-badge">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Secure & Reliable</span>
+                </div>
+                <div class="feature-badge">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Smart Analytics</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Animated Background Elements -->
+    <div class="hero-bg-elements">
+        <div class="floating-shape shape-1"></div>
+        <div class="floating-shape shape-2"></div>
+        <div class="floating-shape shape-3"></div>
     </div>
 </section>
 
-<!-- URL Shortener Form -->
+<!-- Enhanced URL Shortener Form -->
 <section class="section-sm">
     <div class="container">
-        <div class="url-form">
-            <form id="shortenForm">
-                <div class="form-group">
-                    <label for="originalUrl" class="form-label">Enter your long URL</label>
-                    <div class="input-group">
-                        <input 
-                            type="url" 
-                            name="originalUrl"
-                            id="originalUrl" 
-                            class="form-input" 
-                            placeholder="https://example.com/very-long-url-that-needs-shortening"
-                            required
-                        >
-                        <button type="submit" id="shortenBtn" class="btn btn-primary btn-lg">
-                            <span class="btn-text">
-                                <i class="fas fa-magic me-2"></i>Shorten URL
-                            </span>
-                        </button>
+        <div class="url-form-container">
+            <div class="url-form">
+                <div class="form-header">
+                    <h2 class="form-title">
+                        <i class="fas fa-magic"></i>
+                        Create Your Short URL
+                    </h2>
+                    <p class="form-subtitle">Enter your long URL below and get a short, shareable link instantly</p>
+                </div>
+                
+                <form id="shortenForm" class="enhanced-form">
+                    <div class="form-group">
+                        <label for="originalUrl" class="form-label">
+                            <i class="fas fa-link"></i>
+                            Enter your long URL
+                        </label>
+                        <div class="input-group enhanced">
+                            <div class="input-prefix">
+                                <i class="fas fa-globe"></i>
+                            </div>
+                            <input 
+                                type="url" 
+                                name="originalUrl"
+                                id="originalUrl" 
+                                class="form-input enhanced" 
+                                placeholder="https://example.com/very-long-url-that-needs-shortening"
+                                required
+                            >
+                            <button type="submit" id="shortenBtn" class="btn btn-primary btn-lg enhanced">
+                                <span class="btn-text">
+                                    <i class="fas fa-magic"></i>
+                                    Shorten URL
+                                </span>
+                                <span class="btn-loading hidden">
+                                    <div class="spinner-sm"></div>
+                                    Processing...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Expiration Date Selection -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-clock"></i>
+                            URL Expiration (Optional)
+                        </label>
+                        <div class="expiration-options">
+                            <div class="expiration-grid">
+                                <div class="form-check enhanced">
+                                    <input type="radio" id="noExpiration" name="expirationType" value="none" class="form-check-input" checked>
+                                    <label for="noExpiration" class="form-check-label">
+                                        <div class="check-icon">
+                                            <i class="fas fa-infinity"></i>
+                                        </div>
+                                        <div class="check-content">
+                                            <span class="check-title">Never Expires</span>
+                                            <span class="check-subtitle">Permanent link</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check enhanced">
+                                    <input type="radio" id="expire1Day" name="expirationType" value="1day" class="form-check-input">
+                                    <label for="expire1Day" class="form-check-label">
+                                        <div class="check-icon">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                        <div class="check-content">
+                                            <span class="check-title">1 Day</span>
+                                            <span class="check-subtitle">Temporary link</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check enhanced">
+                                    <input type="radio" id="expire1Week" name="expirationType" value="1week" class="form-check-input">
+                                    <label for="expire1Week" class="form-check-label">
+                                        <div class="check-icon">
+                                            <i class="fas fa-calendar-week"></i>
+                                        </div>
+                                        <div class="check-content">
+                                            <span class="check-title">1 Week</span>
+                                            <span class="check-subtitle">Short-term link</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check enhanced">
+                                    <input type="radio" id="expire1Month" name="expirationType" value="1month" class="form-check-input">
+                                    <label for="expire1Month" class="form-check-label">
+                                        <div class="check-icon">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </div>
+                                        <div class="check-content">
+                                            <span class="check-title">1 Month</span>
+                                            <span class="check-subtitle">Medium-term link</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check enhanced">
+                                    <input type="radio" id="customExpiration" name="expirationType" value="custom" class="form-check-input">
+                                    <label for="customExpiration" class="form-check-label">
+                                        <div class="check-icon">
+                                            <i class="fas fa-calendar-plus"></i>
+                                        </div>
+                                        <div class="check-content">
+                                            <span class="check-title">Custom Date</span>
+                                            <span class="check-subtitle">Choose your own</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Enhanced Custom Date Input -->
+                            <div id="customDateContainer" class="custom-date-container hidden">
+                                <div class="date-input-group">
+                                    <label for="customExpirationDate" class="date-label">
+                                        <i class="fas fa-calendar-day"></i>
+                                        Custom Expiration Date
+                                    </label>
+                                    <input 
+                                        type="datetime-local" 
+                                        id="customExpirationDate" 
+                                        class="form-input date-input"
+                                        min=""
+                                    >
+                                    <div class="date-help">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span>Select when this URL should expire. After expiration, the link will no longer work.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-footer">
+                        <div class="form-benefits">
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Free forever</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>No registration required</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Instant results</span>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Enhanced Loading State -->
+                <div id="loadingState" class="loading-state hidden">
+                    <div class="loading-content">
+                        <div class="loading-spinner">
+                            <div class="spinner-ring"></div>
+                            <div class="spinner-ring"></div>
+                            <div class="spinner-ring"></div>
+                        </div>
+                        <h3 class="loading-title">Creating your short URL...</h3>
+                        <p class="loading-subtitle">This will only take a moment</p>
+                        <div class="loading-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <p style="color: var(--gray-500); font-size: 0.875rem; margin: 0;">
-                    Free forever • No registration required • Instant results
-                </p>
-            </form>
 
-            <!-- Loading State -->
-            <div id="loadingState" class="hidden text-center" style="padding: 2rem 0;">
-                <div class="spinner"></div>
-                <div class="loading-text">Creating your short URL...</div>
-            </div>
-
-            <!-- Success State -->
-            <div id="resultSection" class="hidden">
-                <div class="success-card">
-                    <h3>
-                        <i class="fas fa-check-circle"></i>
-                        Your short URL is ready!
-                    </h3>
-                    <div class="url-result">
-                        <input type="text" id="shortUrl" readonly>
-                        <button class="copy-btn" id="copyBtn">
-                            <i class="fas fa-copy"></i>
-                            Copy
-                        </button>
-                    </div>
-                    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
-                        <a href="#" id="visitLink" class="btn btn-secondary" target="_blank">
-                            <i class="fas fa-external-link-alt"></i>
-                            Visit Link
-                        </a>
-                        <a href="#" id="statsLink" class="btn btn-secondary">
-                            <i class="fas fa-chart-line"></i>
-                            View Stats
-                        </a>
-                    </div>
-                    <div class="mt-3 text-center">
-                        <small class="text-muted">
-                            <span id="clickCount">0</span> clicks • Created <span id="createdDate"></span>
-                        </small>
+                <!-- Enhanced Success State -->
+                <div id="resultSection" class="result-section hidden">
+                    <div class="success-card enhanced">
+                        <div class="success-header">
+                            <div class="success-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <h3 class="success-title">Your short URL is ready!</h3>
+                            <p class="success-subtitle">Share this link with anyone, anywhere</p>
+                        </div>
+                        
+                        <div class="url-result enhanced">
+                            <div class="url-display">
+                                <div class="url-label">Short URL</div>
+                                <input type="text" id="shortUrl" readonly class="url-input">
+                            </div>
+                            <button class="copy-btn enhanced" id="copyBtn">
+                                <i class="fas fa-copy"></i>
+                                <span>Copy</span>
+                            </button>
+                        </div>
+                        
+                        <div class="url-actions">
+                            <a href="#" id="visitLink" class="btn btn-secondary enhanced" target="_blank">
+                                <i class="fas fa-external-link-alt"></i>
+                                Visit Link
+                            </a>
+                            <a href="#" id="statsLink" class="btn btn-outline enhanced">
+                                <i class="fas fa-chart-line"></i>
+                                View Stats
+                            </a>
+                            <button class="btn btn-outline enhanced" id="qrCodeBtn">
+                                <i class="fas fa-qrcode"></i>
+                                QR Code
+                            </button>
+                        </div>
+                        
+                        <div class="url-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-mouse-pointer"></i>
+                                <span><span id="clickCount">0</span> clicks</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar-plus"></i>
+                                <span>Created <span id="createdDate"></span></span>
+                            </div>
+                        </div>
+                        
+                        <div id="expirationInfo" class="expiration-info hidden">
+                            <div class="expiration-badge">
+                                <i class="fas fa-clock"></i>
+                                <span>Expires: <span id="expirationDate"></span></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Error State -->
-            <div id="errorSection" class="hidden">
-                <div class="alert alert-error">
-                    <h6>
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Error
-                    </h6>
-                    <p id="errorMessage"></p>
+                <!-- Enhanced Error State -->
+                <div id="errorSection" class="error-section hidden">
+                    <div class="alert alert-error enhanced">
+                        <div class="error-header">
+                            <div class="error-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <h6 class="error-title">Error</h6>
+                        </div>
+                        <p id="errorMessage" class="error-message"></p>
+                        <button class="btn btn-outline btn-sm" onclick="resetForm()">
+                            <i class="fas fa-redo"></i>
+                            Try Again
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Features Section -->
-<section class="section" style="background: var(--gray-50);">
+<!-- Enhanced Features Section -->
+<section class="section features-section">
     <div class="container">
-        <div class="text-center" style="margin-bottom: 4rem;">
-            <h2>Why Choose MiniLink?</h2>
-            <p>Powerful features designed to make URL management effortless and efficient</p>
+        <div class="section-header">
+            <h2 class="section-title">
+                Why Choose <span class="gradient-text">MiniLink</span>?
+            </h2>
+            <p class="section-subtitle">
+                Powerful features designed to make URL management effortless and efficient
+            </p>
         </div>
         
-        <div class="grid grid-cols-3">
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="stat-icon primary">
-                        <i class="fas fa-bolt"></i>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h4 class="feature-title">Lightning Fast</h4>
+                <p class="feature-description">
+                    Create short URLs in milliseconds with our optimized backend infrastructure and advanced caching.
+                </p>
+                <div class="feature-stats">
+                    <div class="stat">
+                        <span class="stat-value">99.9%</span>
+                        <span class="stat-label">Uptime</span>
                     </div>
-                    <h4>Lightning Fast</h4>
-                    <p>Create short URLs in milliseconds with our optimized backend infrastructure and advanced caching.</p>
+                    <div class="stat">
+                        <span class="stat-value">&lt;100ms</span>
+                        <span class="stat-label">Response</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="stat-icon success">
-                        <i class="fas fa-chart-line"></i>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h4 class="feature-title">Smart Analytics</h4>
+                <p class="feature-description">
+                    Track clicks, monitor performance, and get insights with our comprehensive analytics dashboard.
+                </p>
+                <div class="feature-stats">
+                    <div class="stat">
+                        <span class="stat-value">Real-time</span>
+                        <span class="stat-label">Tracking</span>
                     </div>
-                    <h4>Smart Analytics</h4>
-                    <p>Track clicks, monitor performance, and get insights with our comprehensive analytics dashboard.</p>
+                    <div class="stat">
+                        <span class="stat-value">Detailed</span>
+                        <span class="stat-label">Reports</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="stat-icon warning">
-                        <i class="fas fa-shield-alt"></i>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h4 class="feature-title">Secure & Reliable</h4>
+                <p class="feature-description">
+                    Enterprise-grade security with 99.9% uptime guarantee. Your links are safe and always accessible.
+                </p>
+                <div class="feature-stats">
+                    <div class="stat">
+                        <span class="stat-value">SSL</span>
+                        <span class="stat-label">Encrypted</span>
                     </div>
-                    <h4>Secure & Reliable</h4>
-                    <p>Enterprise-grade security with 99.9% uptime guarantee. Your links are safe and always accessible.</p>
+                    <div class="stat">
+                        <span class="stat-value">24/7</span>
+                        <span class="stat-label">Monitoring</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Recent URLs Section -->
-<section class="section" id="recentUrlsSection">
+<!-- Enhanced Recent URLs Section -->
+<section class="section recent-section" id="recentUrlsSection">
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
-            <div>
-                <h2>Recently Shortened URLs</h2>
-                <p>See what others are shortening</p>
+        <div class="section-header">
+            <div class="header-content">
+                <h2 class="section-title">
+                    Recently <span class="gradient-text">Shortened</span> URLs
+                </h2>
+                <p class="section-subtitle">See what others are shortening</p>
             </div>
-            <button class="btn btn-outline" id="refreshRecentBtn">
+            <button class="btn btn-outline enhanced" id="refreshRecentBtn">
                 <i class="fas fa-sync-alt"></i>
                 Refresh
             </button>
         </div>
         
-        <div id="recentUrlsContainer">
-            <div class="text-center" style="padding: 4rem 0;">
+        <div id="recentUrlsContainer" class="recent-urls-container">
+            <div class="loading-placeholder">
                 <div class="spinner"></div>
                 <div class="loading-text">Loading recent URLs...</div>
             </div>
@@ -151,168 +390,419 @@
     </div>
 </section>
 
+<!-- QR Code Modal -->
+<div class="modal" id="qrModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">
+                <i class="fas fa-qrcode"></i>
+                QR Code
+            </h3>
+            <button class="modal-close" onclick="closeQRModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="qr-container">
+                <div class="qr-code" id="qrCodeDisplay"></div>
+                <p class="qr-text">Scan to access your shortened URL</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="downloadQRCode()">
+                <i class="fas fa-download"></i>
+                Download QR Code
+            </button>
+            <button class="btn btn-outline" onclick="closeQRModal()">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
 <script>
-// Form handling
-document.getElementById('urlShortenForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const originalUrl = document.getElementById('originalUrl').value;
-    const loadingState = document.getElementById('loadingState');
-    const successState = document.getElementById('successState');
-    const errorState = document.getElementById('errorState');
-    const form = this;
-    
-    // Reset states
-    [loadingState, successState, errorState].forEach(el => el.classList.add('hidden'));
-    loadingState.classList.remove('hidden');
-    
-    try {
+// Enhanced JavaScript with modern patterns and better UX
+class URLShortener {
+    constructor() {
+        this.initializeElements();
+        this.bindEvents();
+        this.setupAnimations();
+    }
+
+    initializeElements() {
+        this.form = document.getElementById('shortenForm');
+        this.loadingState = document.getElementById('loadingState');
+        this.resultSection = document.getElementById('resultSection');
+        this.errorSection = document.getElementById('errorSection');
+        this.expirationRadios = document.querySelectorAll('input[name="expirationType"]');
+        this.customDateContainer = document.getElementById('customDateContainer');
+        this.customDateInput = document.getElementById('customExpirationDate');
+        this.recentContainer = document.getElementById('recentUrlsContainer');
+        this.refreshBtn = document.getElementById('refreshRecentBtn');
+    }
+
+    bindEvents() {
+        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        this.expirationRadios.forEach(radio => {
+            radio.addEventListener('change', () => this.handleExpirationChange());
+        });
+        this.refreshBtn.addEventListener('click', () => this.loadRecentUrls());
+        document.getElementById('copyBtn').addEventListener('click', () => this.copyURL());
+        document.getElementById('qrCodeBtn').addEventListener('click', () => this.showQRModal());
+        
+        // Set minimum date for custom expiration
+        this.setupCustomDate();
+    }
+
+    setupCustomDate() {
+        const now = new Date();
+        const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        this.customDateInput.min = localDateTime;
+    }
+
+    handleExpirationChange() {
+        const selectedValue = document.querySelector('input[name="expirationType"]:checked').value;
+        
+        if (selectedValue === 'custom') {
+            this.customDateContainer.classList.remove('hidden');
+            this.customDateInput.required = true;
+            this.customDateContainer.classList.add('slide-in-up');
+        } else {
+            this.customDateContainer.classList.add('hidden');
+            this.customDateInput.required = false;
+        }
+    }
+
+    async handleSubmit(e) {
+        e.preventDefault();
+        
+        const originalUrl = document.getElementById('originalUrl').value;
+        const expirationType = document.querySelector('input[name="expirationType"]:checked').value;
+        
+        this.showLoadingState();
+        
+        try {
+            const expiresAt = this.calculateExpirationDate(expirationType);
+            const response = await this.shortenURL(originalUrl, expiresAt);
+            
+            if (response.success) {
+                this.showSuccessState(response.data);
+                this.loadRecentUrls();
+            } else {
+                throw new Error(response.error?.message || 'Failed to shorten URL');
+            }
+        } catch (error) {
+            this.showErrorState(error.message);
+        }
+    }
+
+    calculateExpirationDate(expirationType) {
+        if (expirationType === 'none') return undefined;
+        
+        const now = new Date();
+        let expirationDate;
+        
+        switch (expirationType) {
+            case '1day':
+                expirationDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                break;
+            case '1week':
+                expirationDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '1month':
+                expirationDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                break;
+            case 'custom':
+                const customDate = this.customDateInput.value;
+                if (customDate) {
+                    expirationDate = new Date(customDate);
+                }
+                break;
+        }
+        
+        return expirationDate ? expirationDate.toISOString() : undefined;
+    }
+
+    async shortenURL(originalUrl, expiresAt) {
         const response = await fetch('/api/shorten', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ originalUrl })
+            body: JSON.stringify({ originalUrl, expiresAt })
         });
         
-        const result = await response.json();
-        
-        if (result.success) {
-            // Show success state
-            document.getElementById('shortUrlResult').value = result.data.shortUrl;
-            document.getElementById('visitLink').href = result.data.shortUrl;
-            document.getElementById('statsLink').href = `/${result.data.shortSlug}/stats`;
-            
-            loadingState.classList.add('hidden');
-            successState.classList.remove('hidden');
-            
-            // Auto-select the URL for easy copying
-            document.getElementById('shortUrlResult').select();
-            
-        } else {
-            throw new Error(result.error?.message || 'Failed to shorten URL');
-        }
-    } catch (error) {
-        loadingState.classList.add('hidden');
-        document.getElementById('errorMessage').textContent = error.message;
-        errorState.classList.remove('hidden');
+        return await response.json();
     }
-});
 
-// Copy button functionality
-document.getElementById('copyButton').addEventListener('click', async function() {
-    const input = document.getElementById('shortUrlResult');
-    const button = this;
-    const originalText = button.innerHTML;
-    
-    try {
-        await navigator.clipboard.writeText(input.value);
-        button.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        button.style.background = 'rgba(16, 185, 129, 0.8)';
+    showLoadingState() {
+        this.hideAllStates();
+        this.loadingState.classList.remove('hidden');
+        this.loadingState.classList.add('fade-in');
         
-        setTimeout(() => {
-            button.innerHTML = originalText;
-            button.style.background = '';
-        }, 2000);
-    } catch (err) {
-        // Fallback for older browsers
-        input.select();
-        document.execCommand('copy');
-        button.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        
-        setTimeout(() => {
-            button.innerHTML = originalText;
-        }, 2000);
+        // Simulate progress
+        const progressFill = document.querySelector('.progress-fill');
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+            }
+            progressFill.style.width = `${progress}%`;
+        }, 100);
     }
-});
 
-// Load recent URLs on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadRecentUrls();
-});
-
-// Refresh recent URLs
-document.getElementById('refreshRecentBtn').addEventListener('click', function() {
-    loadRecentUrls();
-});
-
-async function loadRecentUrls() {
-    const container = document.getElementById('recentUrlsContainer');
-    
-    // Show loading state
-    container.innerHTML = `
-        <div class="text-center" style="padding: 4rem 0;">
-            <div class="spinner"></div>
-            <div class="loading-text">Loading recent URLs...</div>
-        </div>
-    `;
-    
-    try {
-        const response = await fetch('/api/urls/recent?limit=6');
-        const result = await response.json();
+    showSuccessState(data) {
+        this.hideAllStates();
         
-        if (result.success && result.data.length > 0) {
-            const urlList = document.createElement('div');
-            urlList.className = 'url-list fade-in';
-            
-            result.data.forEach(url => {
-                const urlItem = document.createElement('div');
-                urlItem.className = 'url-item';
-                urlItem.innerHTML = `
-                    <div class="url-info">
-                        <div class="url-slug">/${url.shortSlug}</div>
-                        <div class="url-original">${truncateUrl(url.originalUrl, 80)}</div>
-                    </div>
-                    <div class="url-meta">
-                        <span class="click-count">${url.clickCount}</span>
-                        <span>${formatRelativeTime(url.createdAt)}</span>
-                        <a href="/${url.shortSlug}/stats" class="btn btn-sm btn-outline">
-                            <i class="fas fa-chart-line"></i>
-                        </a>
-                    </div>
-                `;
-                urlList.appendChild(urlItem);
-            });
-            
-            container.innerHTML = '';
-            container.appendChild(urlList);
-        } else {
-            container.innerHTML = `
-                <div class="text-center" style="padding: 4rem 0;">
-                    <div style="font-size: 3rem; color: var(--gray-300); margin-bottom: 1rem;">
-                        <i class="fas fa-inbox"></i>
-                    </div>
-                    <h4 style="color: var(--gray-600);">No URLs Yet</h4>
-                    <p style="color: var(--gray-500);">Be the first to shorten a URL!</p>
-                </div>
-            `;
+        // Populate success data
+        document.getElementById('shortUrl').value = data.shortUrl;
+        document.getElementById('visitLink').href = data.shortUrl;
+        document.getElementById('statsLink').href = `/${data.shortSlug}/stats`;
+        document.getElementById('clickCount').textContent = data.clickCount;
+        document.getElementById('createdDate').textContent = new Date(data.createdAt).toLocaleDateString();
+        
+        // Show expiration info if set
+        if (data.expiresAt) {
+            document.getElementById('expirationDate').textContent = new Date(data.expiresAt).toLocaleString();
+            document.getElementById('expirationInfo').classList.remove('hidden');
         }
-    } catch (error) {
-        container.innerHTML = `
-            <div class="text-center" style="padding: 4rem 0;">
-                <div style="font-size: 3rem; color: var(--warning); margin-bottom: 1rem;">
-                    <i class="fas fa-exclamation-triangle"></i>
+        
+        this.resultSection.classList.remove('hidden');
+        this.resultSection.classList.add('slide-in-up');
+        
+        // Auto-select URL for easy copying
+        document.getElementById('shortUrl').select();
+        
+        // Show success toast
+        this.showToast('URL shortened successfully!', 'success');
+    }
+
+    showErrorState(message) {
+        this.hideAllStates();
+        document.getElementById('errorMessage').textContent = message;
+        this.errorSection.classList.remove('hidden');
+        this.errorSection.classList.add('slide-in-up');
+        
+        this.showToast(message, 'error');
+    }
+
+    hideAllStates() {
+        [this.loadingState, this.resultSection, this.errorSection].forEach(state => {
+            state.classList.add('hidden');
+        });
+    }
+
+    async copyURL() {
+        const input = document.getElementById('shortUrl');
+        const button = document.getElementById('copyBtn');
+        
+        try {
+            await navigator.clipboard.writeText(input.value);
+            button.innerHTML = '<i class="fas fa-check"></i><span>Copied!</span>';
+            button.classList.add('copy-success');
+            
+            setTimeout(() => {
+                button.innerHTML = '<i class="fas fa-copy"></i><span>Copy</span>';
+                button.classList.remove('copy-success');
+            }, 2000);
+            
+            this.showToast('URL copied to clipboard!', 'success');
+        } catch (err) {
+            input.select();
+            document.execCommand('copy');
+            this.showToast('URL copied to clipboard!', 'success');
+        }
+    }
+
+    showQRModal() {
+        const shortUrl = document.getElementById('shortUrl').value;
+        const qrCodeDisplay = document.getElementById('qrCodeDisplay');
+        
+        // Generate QR code using a service
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shortUrl)}`;
+        qrCodeDisplay.innerHTML = `<img src="${qrUrl}" alt="QR Code" style="width: 100%; height: auto;">`;
+        
+        document.getElementById('qrModal').classList.add('show');
+    }
+
+    closeQRModal() {
+        document.getElementById('qrModal').classList.remove('show');
+    }
+
+    async loadRecentUrls() {
+        this.recentContainer.innerHTML = `
+            <div class="loading-placeholder">
+                <div class="spinner"></div>
+                <div class="loading-text">Loading recent URLs...</div>
+            </div>
+        `;
+        
+        try {
+            const response = await fetch('/api/urls/recent?limit=6');
+            const result = await response.json();
+            
+            if (result.success && result.data.length > 0) {
+                this.renderRecentUrls(result.data);
+            } else {
+                this.renderEmptyState();
+            }
+        } catch (error) {
+            this.renderErrorState();
+        }
+    }
+
+    renderRecentUrls(urls) {
+        const urlList = document.createElement('div');
+        urlList.className = 'url-list enhanced fade-in';
+        
+        urls.forEach(url => {
+            const urlItem = this.createURLItem(url);
+            urlList.appendChild(urlItem);
+        });
+        
+        this.recentContainer.innerHTML = '';
+        this.recentContainer.appendChild(urlList);
+    }
+
+    createURLItem(url) {
+        const urlItem = document.createElement('div');
+        urlItem.className = 'url-item enhanced';
+        urlItem.innerHTML = `
+            <div class="url-info">
+                <div class="url-slug">/${url.shortSlug}</div>
+                <div class="url-original">${this.truncateUrl(url.originalUrl, 80)}</div>
+                ${url.expiresAt ? `
+                    <div class="url-expiration">
+                        <i class="fas fa-clock"></i>
+                        Expires: ${new Date(url.expiresAt).toLocaleDateString()}
+                    </div>
+                ` : ''}
+            </div>
+            <div class="url-meta">
+                <span class="click-count">${url.clickCount}</span>
+                <span class="url-time">${this.formatRelativeTime(url.createdAt)}</span>
+                <a href="/${url.shortSlug}/stats" class="btn btn-sm btn-outline">
+                    <i class="fas fa-chart-line"></i>
+                </a>
+            </div>
+        `;
+        return urlItem;
+    }
+
+    renderEmptyState() {
+        this.recentContainer.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-inbox"></i>
                 </div>
-                <h4 style="color: var(--gray-600);">Unable to Load URLs</h4>
-                <p style="color: var(--gray-500);">Please try again later.</p>
+                <h4 class="empty-title">No URLs Yet</h4>
+                <p class="empty-subtitle">Be the first to shorten a URL!</p>
             </div>
         `;
     }
+
+    renderErrorState() {
+        this.recentContainer.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4 class="error-title">Unable to Load URLs</h4>
+                <p class="error-subtitle">Please try again later.</p>
+            </div>
+        `;
+    }
+
+    showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        const container = document.getElementById('toastContainer');
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => {
+                container.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    setupAnimations() {
+        // Intersection Observer for animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        // Observe elements for animation
+        document.querySelectorAll('.feature-card, .url-item').forEach(el => {
+            observer.observe(el);
+        });
+    }
+
+    truncateUrl(url, maxLength) {
+        if (url.length <= maxLength) return url;
+        return url.substring(0, maxLength - 3) + '...';
+    }
+
+    formatRelativeTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) return 'just now';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+        return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    }
 }
 
-function truncateUrl(url, maxLength) {
-    if (url.length <= maxLength) return url;
-    return url.substring(0, maxLength - 3) + '...';
+// Global functions
+function closeQRModal() {
+    document.getElementById('qrModal').classList.remove('show');
 }
 
-function formatRelativeTime(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
+function downloadQRCode() {
+    const shortUrl = document.getElementById('shortUrl').value;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shortUrl)}`;
+    const link = document.createElement('a');
+    link.download = 'qr-code.png';
+    link.href = qrUrl;
+    link.click();
+}
+
+function resetForm() {
+    document.getElementById('shortenForm').reset();
+    document.getElementById('customDateContainer').classList.add('hidden');
+    document.getElementById('errorSection').classList.add('hidden');
+    document.getElementById('resultSection').classList.add('hidden');
+    document.getElementById('loadingState').classList.add('hidden');
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const urlShortener = new URLShortener();
+    urlShortener.loadRecentUrls();
     
-    if (diffInSeconds < 60) return 'just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
-}
+    // Make functions globally available
+    window.closeQRModal = closeQRModal;
+    window.downloadQRCode = downloadQRCode;
+    window.resetForm = resetForm;
+});
 </script> 

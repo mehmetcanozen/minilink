@@ -1,266 +1,409 @@
-<!-- URL Stats Header -->
-<section class="bg-gradient-primary text-white py-5">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-8">
-                <div class="d-flex align-items-center mb-3">
-                    <i class="fas fa-chart-line fa-2x me-3"></i>
-                    <div>
-                        <h1 class="display-6 fw-bold mb-1">URL Statistics</h1>
-                        <p class="lead mb-0">Analytics for your short URL</p>
+<!-- Enhanced URL Stats Page -->
+<div class="stats-page">
+    <!-- Hero Section with Gradient Background -->
+    <section class="stats-hero">
+        <div class="hero-background">
+            <div class="gradient-overlay"></div>
+            <div class="floating-shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+                <div class="shape shape-3"></div>
+            </div>
+        </div>
+        
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-header">
+                    <div class="hero-icon">
+                        <i class="fas fa-chart-line"></i>
                     </div>
+                    <h1 class="hero-title">URL Analytics</h1>
+                    <p class="hero-subtitle">Comprehensive insights for your shortened link</p>
                 </div>
                 
-                <!-- URL Info Card -->
-                <div class="bg-white bg-opacity-10 rounded-3 p-4 mt-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h6 class="text-white-50 mb-2">Short URL</h6>
-                            <div class="input-group">
-                                <input type="text" class="form-control form-control-lg bg-white" 
-                                       value="<%= shortUrl %>" id="shortUrlInput" readonly>
-                                <button class="btn btn-light" type="button" id="copyMainBtn" title="Copy URL">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                                <button class="btn btn-light" type="button" id="visitMainBtn" title="Visit URL">
-                                    <a href="<%= shortUrl %>" target="_blank" class="text-decoration-none text-dark">
+                <!-- Main URL Card -->
+                <div class="main-url-card">
+                    <div class="url-info">
+                        <div class="url-display">
+                            <div class="url-label">Short URL</div>
+                            <div class="url-input-group">
+                                <input type="text" class="url-input" value="<%= shortUrl %>" readonly>
+                                <div class="url-actions">
+                                    <button class="action-btn copy-btn" onclick="copyToClipboard('<%= shortUrl %>')" title="Copy URL">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <a href="<%= shortUrl %>" target="_blank" class="action-btn visit-btn" title="Visit URL">
                                         <i class="fas fa-external-link-alt"></i>
                                     </a>
-                                </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
-                            <div class="text-white-50 small mb-1">Total Clicks</div>
-                            <div class="display-4 fw-bold"><%= urlStats.clickCount %></div>
+                        
+                        <div class="click-stats">
+                            <div class="click-number">
+                                <span class="number"><%= urlStats.clickCount %></span>
+                                <span class="label">Total Clicks</span>
+                            </div>
+                            <div class="click-trend">
+                                <i class="fas fa-trending-up"></i>
+                                <span>Live tracking</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-4 text-center">
-                <!-- QR Code -->
-                <div class="bg-white rounded-3 p-3 d-inline-block">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<%= encodeURIComponent(shortUrl) %>" 
-                         alt="QR Code" class="img-fluid">
-                </div>
-                <div class="mt-2">
-                    <button class="btn btn-light btn-sm" onclick="downloadQRCode()">
-                        <i class="fas fa-download me-1"></i>Download QR
-                    </button>
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- Stats Details -->
-<section class="py-5">
-    <div class="container">
-        <div class="row g-4">
-            <!-- URL Details Card -->
-            <div class="col-lg-8">
-                <div class="card url-card h-100">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h5 class="fw-bold mb-0">
-                            <i class="fas fa-info-circle me-2 text-primary"></i>
-                            URL Details
-                        </h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <!-- Original URL -->
-                        <div class="mb-4">
-                            <label class="fw-bold text-muted mb-2">Original URL</label>
-                            <div class="p-3 bg-light rounded-3 border">
-                                <div class="d-flex align-items-center">
-                                    <div class="flex-grow-1 url-text">
-                                        <a href="<%= urlStats.originalUrl %>" target="_blank" 
-                                           class="text-decoration-none text-dark">
+    <!-- Stats Dashboard -->
+    <section class="stats-dashboard">
+        <div class="container">
+            <div class="dashboard-grid">
+                <!-- Left Column - URL Details -->
+                <div class="dashboard-main">
+                    <!-- URL Details Card -->
+                    <div class="detail-card">
+                        <div class="card-header">
+                            <div class="header-icon">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <div class="header-content">
+                                <h3>URL Details</h3>
+                                <p>Complete information about your shortened link</p>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body">
+                            <!-- Original URL Section -->
+                            <div class="url-section">
+                                <label class="section-label">Original URL</label>
+                                <div class="original-url-display">
+                                    <div class="url-content">
+                                        <a href="<%= urlStats.originalUrl %>" target="_blank" class="original-link">
                                             <%= urlStats.originalUrl %>
-                                            <i class="fas fa-external-link-alt ms-2 text-muted small"></i>
                                         </a>
+                                        <span class="external-icon">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </span>
                                     </div>
-                                    <button class="btn btn-sm btn-outline-primary ms-3" 
-                                            onclick="copyToClipboard('<%= urlStats.originalUrl %>')">
+                                    <button class="copy-original-btn" onclick="copyToClipboard('<%= urlStats.originalUrl %>')">
+                                        <i class="fas fa-copy"></i>
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Stats Grid -->
+                            <div class="stats-grid">
+                                <div class="stat-item created">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-calendar-plus"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-label">Created</div>
+                                        <div class="stat-value" id="createdDate">
+                                            <%= new Date(urlStats.createdAt).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            }) %>
+                                        </div>
+                                        <div class="stat-time">
+                                            <%= new Date(urlStats.createdAt).toLocaleTimeString('en-US', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="stat-item updated">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-label">Last Click</div>
+                                        <div class="stat-value" id="updatedDate">
+                                            <%= new Date(urlStats.updatedAt).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            }) %>
+                                        </div>
+                                        <div class="stat-time">
+                                            <%= new Date(urlStats.updatedAt).toLocaleTimeString('en-US', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <% if (urlStats.expiresAt) { %>
+                                <div class="stat-item expires">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-hourglass-end"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <div class="stat-label">Expires</div>
+                                        <div class="stat-value" id="expiresDate">
+                                            <%= new Date(urlStats.expiresAt).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            }) %>
+                                        </div>
+                                        <div class="stat-time">
+                                            <%= new Date(urlStats.expiresAt).toLocaleTimeString('en-US', {
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        </div>
+                                    </div>
+                                </div>
+                                <% } %>
+                            </div>
+
+                            <!-- URL ID Section -->
+                            <div class="url-id-section">
+                                <label class="section-label">URL ID (for API usage)</label>
+                                <div class="id-display">
+                                    <input type="text" class="id-input" value="<%= urlStats.id %>" readonly>
+                                    <button class="copy-id-btn" onclick="copyToClipboard('<%= urlStats.id %>')">
                                         <i class="fas fa-copy"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Stats Grid -->
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="bg-primary bg-opacity-10 rounded-3 p-3 text-center">
-                                    <i class="fas fa-calendar-plus fa-2x text-primary mb-2"></i>
-                                    <div class="fw-bold">Created</div>
-                                    <div class="text-muted small" id="createdDate">
-                                        <%= new Date(urlStats.createdAt).toLocaleString('en-US', {
-                                            dateStyle: 'long',
-                                            timeStyle: 'short'
-                                        }) %>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="bg-success bg-opacity-10 rounded-3 p-3 text-center">
-                                    <i class="fas fa-clock fa-2x text-success mb-2"></i>
-                                    <div class="fw-bold">Last Click</div>
-                                    <div class="text-muted small" id="updatedDate">
-                                        <%= new Date(urlStats.updatedAt).toLocaleString('en-US', {
-                                            dateStyle: 'long',
-                                            timeStyle: 'short'
-                                        }) %>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- URL ID (for developers) -->
-                        <div class="mt-4">
-                            <label class="fw-bold text-muted mb-2 small">URL ID (for API usage)</label>
-                            <div class="input-group input-group-sm">
-                                <input type="text" class="form-control font-monospace small bg-light" 
-                                       value="<%= urlStats.id %>" readonly>
-                                <button class="btn btn-outline-secondary" type="button" 
-                                        onclick="copyToClipboard('<%= urlStats.id %>')">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="col-lg-4">
-                <div class="card feature-card">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h5 class="fw-bold mb-0">
-                            <i class="fas fa-tools me-2 text-success"></i>
-                            Quick Actions
-                        </h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary" onclick="shareUrl()">
-                                <i class="fas fa-share me-2"></i>
-                                Share URL
-                            </button>
-                            <button class="btn btn-info text-white" onclick="showQRModal()">
-                                <i class="fas fa-qrcode me-2"></i>
-                                View QR Code
-                            </button>
-                            <button class="btn btn-outline-secondary" onclick="refreshStats()">
-                                <i class="fas fa-sync-alt me-2"></i>
-                                Refresh Stats
-                            </button>
-                            <hr class="my-3">
-                            <a href="/" class="btn btn-outline-primary">
-                                <i class="fas fa-plus me-2"></i>
-                                Create New URL
-                            </a>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Performance Insights -->
-                <div class="card feature-card mt-4">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h6 class="fw-bold mb-0">
-                            <i class="fas fa-lightbulb me-2 text-warning"></i>
-                            Insights
-                        </h6>
-                    </div>
-                    <div class="card-body p-4">
-                        <% 
-                        const daysSinceCreated = Math.max(1, Math.floor((new Date() - new Date(urlStats.createdAt)) / (1000 * 60 * 60 * 24)));
-                        const avgClicksPerDay = (urlStats.clickCount / daysSinceCreated).toFixed(1);
-                        const progressWidth = Math.min(avgClicksPerDay * 10, 100);
-                        %>
+                <!-- Right Column - Actions & Insights -->
+                <div class="dashboard-sidebar">
+                    <!-- QR Code Card -->
+                    <div class="qr-card">
+                        <div class="card-header">
+                            <div class="header-icon">
+                                <i class="fas fa-qrcode"></i>
+                            </div>
+                            <div class="header-content">
+                                <h3>QR Code</h3>
+                                <p>Scan to access your link</p>
+                            </div>
+                        </div>
                         
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <small class="text-muted">Daily Average</small>
-                                <span class="fw-bold"><%= avgClicksPerDay %> clicks</span>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar" role="progressbar" style="width: 0%;" 
-                                     data-width="<%= progressWidth %>"></div>
+                        <div class="card-body">
+                            <div class="qr-display">
+                                <div class="qr-container">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<%= encodeURIComponent(shortUrl) %>" 
+                                         alt="QR Code" class="qr-image">
+                                </div>
+                                <div class="qr-actions">
+                                    <button class="qr-btn primary" onclick="showQRModal()">
+                                        <i class="fas fa-expand"></i>
+                                        View Full Size
+                                    </button>
+                                    <button class="qr-btn secondary" onclick="downloadQRCode()">
+                                        <i class="fas fa-download"></i>
+                                        Download
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <small class="text-muted">Link Age</small>
-                                <span class="fw-bold">
-                                    <%= daysSinceCreated %> <%= daysSinceCreated === 1 ? 'day' : 'days' %>
-                                </span>
+                    <!-- Quick Actions Card -->
+                    <div class="actions-card">
+                        <div class="card-header">
+                            <div class="header-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <div class="header-content">
+                                <h3>Quick Actions</h3>
+                                <p>Manage your link</p>
                             </div>
                         </div>
+                        
+                        <div class="card-body">
+                            <div class="action-buttons">
+                                <button class="action-button share-btn" onclick="shareUrl()">
+                                    <div class="btn-icon">
+                                        <i class="fas fa-share"></i>
+                                    </div>
+                                    <div class="btn-content">
+                                        <span class="btn-title">Share URL</span>
+                                        <span class="btn-subtitle">Share with others</span>
+                                    </div>
+                                </button>
+                                
+                                <button class="action-button refresh-btn" onclick="refreshStats()">
+                                    <div class="btn-icon">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </div>
+                                    <div class="btn-content">
+                                        <span class="btn-title">Refresh Stats</span>
+                                        <span class="btn-subtitle">Update data</span>
+                                    </div>
+                                </button>
+                                
+                                <a href="/" class="action-button create-btn">
+                                    <div class="btn-icon">
+                                        <i class="fas fa-plus"></i>
+                                    </div>
+                                    <div class="btn-content">
+                                        <span class="btn-title">Create New</span>
+                                        <span class="btn-subtitle">Shorten another URL</span>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
 
-                        <% if (urlStats.clickCount === 0) { %>
-                            <div class="alert alert-info py-2 px-3 small">
-                                <i class="fas fa-info-circle me-1"></i>
-                                No clicks yet. Share your URL to get started!
+                    <!-- Performance Insights Card -->
+                    <div class="insights-card">
+                        <div class="card-header">
+                            <div class="header-icon">
+                                <i class="fas fa-lightbulb"></i>
                             </div>
-                        <% } else if (urlStats.clickCount >= 100) { %>
-                            <div class="alert alert-success py-2 px-3 small">
-                                <i class="fas fa-star me-1"></i>
-                                This is a popular link! Great work.
+                            <div class="header-content">
+                                <h3>Performance Insights</h3>
+                                <p>Analytics overview</p>
                             </div>
-                        <% } else if (urlStats.clickCount >= 10) { %>
-                            <div class="alert alert-primary py-2 px-3 small">
-                                <i class="fas fa-thumbs-up me-1"></i>
-                                Good engagement. Keep sharing the link.
+                        </div>
+                        
+                        <div class="card-body">
+                            <% 
+                            const daysSinceCreated = Math.max(1, Math.floor((new Date() - new Date(urlStats.createdAt)) / (1000 * 60 * 60 * 24)));
+                            const avgClicksPerDay = (urlStats.clickCount / daysSinceCreated).toFixed(1);
+                            const progressWidth = Math.min(avgClicksPerDay * 10, 100);
+                            %>
+                            
+                            <div class="insight-item">
+                                <div class="insight-header">
+                                    <span class="insight-label">Daily Average</span>
+                                    <span class="insight-value"><%= avgClicksPerDay %> clicks</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 0%;" data-width="<%= progressWidth %>"></div>
+                                    </div>
+                                </div>
                             </div>
-                        <% } %>
+
+                            <div class="insight-item">
+                                <div class="insight-header">
+                                    <span class="insight-label">Link Age</span>
+                                    <span class="insight-value">
+                                        <%= daysSinceCreated %> <%= daysSinceCreated === 1 ? 'day' : 'days' %>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Performance Status -->
+                            <div class="performance-status">
+                                <% if (urlStats.clickCount === 0) { %>
+                                    <div class="status-item info">
+                                        <div class="status-icon">
+                                            <i class="fas fa-info-circle"></i>
+                                        </div>
+                                        <div class="status-content">
+                                            <div class="status-title">Getting Started</div>
+                                            <div class="status-message">No clicks yet. Share your URL to get started!</div>
+                                        </div>
+                                    </div>
+                                <% } else if (urlStats.clickCount >= 100) { %>
+                                    <div class="status-item success">
+                                        <div class="status-icon">
+                                            <i class="fas fa-star"></i>
+                                        </div>
+                                        <div class="status-content">
+                                            <div class="status-title">Popular Link!</div>
+                                            <div class="status-message">This is performing exceptionally well!</div>
+                                        </div>
+                                    </div>
+                                <% } else if (urlStats.clickCount >= 10) { %>
+                                    <div class="status-item good">
+                                        <div class="status-icon">
+                                            <i class="fas fa-thumbs-up"></i>
+                                        </div>
+                                        <div class="status-content">
+                                            <div class="status-title">Good Engagement</div>
+                                            <div class="status-message">Keep sharing to grow your audience!</div>
+                                        </div>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
+</div>
 
-<!-- QR Code Modal -->
+<!-- Enhanced QR Code Modal -->
 <div class="modal fade" id="qrModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-qrcode me-2"></i>QR Code for <%= slug %>
-                </h5>
+                <div class="modal-title">
+                    <i class="fas fa-qrcode"></i>
+                    <span>QR Code for <%= slug %></span>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center p-4">
-                <div class="bg-white border rounded p-4 d-inline-block mb-3">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=<%= encodeURIComponent(shortUrl) %>" 
-                         alt="QR Code" class="img-fluid" id="modalQRImage">
-                </div>
-                <div class="mb-3">
-                    <p class="text-muted mb-2">Scan to access:</p>
-                    <code class="bg-light p-2 rounded"><%= shortUrl %></code>
-                </div>
-                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                    <button class="btn btn-primary" onclick="downloadQRCode()">
-                        <i class="fas fa-download me-2"></i>Download
-                    </button>
-                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('<%= shortUrl %>')">
-                        <i class="fas fa-copy me-2"></i>Copy URL
-                    </button>
+            <div class="modal-body">
+                <div class="qr-modal-content">
+                    <div class="qr-display-large">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=<%= encodeURIComponent(shortUrl) %>" 
+                             alt="QR Code" class="qr-image-large">
+                    </div>
+                    <div class="qr-info">
+                        <p class="qr-description">Scan this QR code to access:</p>
+                        <div class="qr-url">
+                            <code><%= shortUrl %></code>
+                        </div>
+                    </div>
+                    <div class="qr-actions-large">
+                        <button class="modal-btn primary" onclick="downloadQRCode()">
+                            <i class="fas fa-download"></i>
+                            Download QR Code
+                        </button>
+                        <button class="modal-btn secondary" onclick="copyToClipboard('<%= shortUrl %>')">
+                            <i class="fas fa-copy"></i>
+                            Copy URL
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Enhanced Toast Container -->
+<div class="toast-container">
+    <div id="toast" class="toast" role="alert">
+        <div class="toast-header">
+            <div class="toast-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="toast-title">MiniLink</div>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            <span id="toastMessage"></span>
+        </div>
+    </div>
+</div>
+
 <!-- Page Scripts -->
 <script>
-// Copy to clipboard function
+// Enhanced copy to clipboard function
 async function copyToClipboard(text) {
     try {
         await navigator.clipboard.writeText(text);
         showToast('Copied to clipboard!', 'success');
     } catch (err) {
-        // Fallback for older browsers
         const textArea = document.createElement('textarea');
         textArea.value = text;
         document.body.appendChild(textArea);
@@ -271,7 +414,7 @@ async function copyToClipboard(text) {
     }
 }
 
-// Share URL function
+// Enhanced share URL function
 async function shareUrl() {
     const url = '<%= shortUrl %>';
     const title = 'Check out this link';
@@ -291,50 +434,1002 @@ async function shareUrl() {
     }
 }
 
-// Show QR modal
+// Enhanced QR modal
 function showQRModal() {
     const modal = new bootstrap.Modal(document.getElementById('qrModal'));
     modal.show();
 }
 
-// Download QR code
+// Enhanced download QR code
 function downloadQRCode() {
     const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=<%= encodeURIComponent(shortUrl) %>';
     const link = document.createElement('a');
     link.download = 'qr-code-<%= slug %>.png';
     link.href = qrUrl;
     link.click();
+    showToast('QR Code downloaded!', 'success');
 }
 
-// Refresh stats
+// Enhanced refresh stats
 function refreshStats() {
     location.reload();
 }
 
-// Copy main URL button
-document.getElementById('copyMainBtn').addEventListener('click', function() {
-    copyToClipboard('<%= shortUrl %>');
-});
-
-// Set progress bar width from data attribute
-document.addEventListener('DOMContentLoaded', function() {
-    const progressBar = document.querySelector('.progress-bar[data-width]');
-    if (progressBar) {
-        setTimeout(() => {
-            const width = progressBar.getAttribute('data-width');
-            progressBar.style.width = width + '%';
-        }, 300); // Small delay for animation
-    }
-});
-
-// Toast notification function
+// Enhanced toast notification
 function showToast(message, type = 'success') {
-    // Reuse the toast function from main.js
-    if (typeof window.showToast === 'function') {
-        window.showToast(message, type);
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    const toastIcon = toast.querySelector('.toast-icon i');
+    
+    toastMessage.textContent = message;
+    
+    // Update icon based on type
+    toastIcon.className = 'fas';
+    if (type === 'success') {
+        toastIcon.classList.add('fa-check-circle', 'text-success');
+    } else if (type === 'error') {
+        toastIcon.classList.add('fa-exclamation-circle', 'text-danger');
+    } else if (type === 'warning') {
+        toastIcon.classList.add('fa-exclamation-triangle', 'text-warning');
     } else {
-        // Fallback alert
-        alert(message);
+        toastIcon.classList.add('fa-info-circle', 'text-primary');
+    }
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+// Initialize page animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate progress bars
+    const progressBars = document.querySelectorAll('.progress-fill[data-width]');
+    progressBars.forEach(bar => {
+        setTimeout(() => {
+            const width = bar.getAttribute('data-width');
+            bar.style.width = width + '%';
+        }, 500);
+    });
+
+    // Add scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in');
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.detail-card, .qr-card, .actions-card, .insights-card').forEach(card => {
+        observer.observe(card);
+    });
+});
+</script>
+
+<style>
+/* Enhanced Stats Page Styles */
+.stats-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+/* Hero Section */
+.stats-hero {
+    position: relative;
+    padding: 4rem 0 6rem;
+    overflow: hidden;
+}
+
+.hero-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+}
+
+.gradient-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%);
+}
+
+.floating-shapes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
+.shape {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    animation: float 6s ease-in-out infinite;
+}
+
+.shape-1 {
+    width: 100px;
+    height: 100px;
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.shape-2 {
+    width: 150px;
+    height: 150px;
+    top: 60%;
+    right: 15%;
+    animation-delay: 2s;
+}
+
+.shape-3 {
+    width: 80px;
+    height: 80px;
+    top: 30%;
+    right: 30%;
+    animation-delay: 4s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+
+.hero-header {
+    margin-bottom: 3rem;
+}
+
+.hero-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.hero-icon i {
+    font-size: 2rem;
+    color: white;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 1rem;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 400;
+}
+
+/* Main URL Card */
+.main-url-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.url-info {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+}
+
+.url-display {
+    flex: 1;
+}
+
+.url-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.url-input-group {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.url-input {
+    flex: 1;
+    border: none;
+    padding: 1rem 1.5rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+    background: transparent;
+    color: #1e293b;
+}
+
+.url-input:focus {
+    outline: none;
+}
+
+.url-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.action-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+}
+
+.click-stats {
+    text-align: center;
+    min-width: 150px;
+}
+
+.click-number {
+    margin-bottom: 0.5rem;
+}
+
+.click-number .number {
+    font-size: 3rem;
+    font-weight: 800;
+    color: white;
+    display: block;
+    line-height: 1;
+}
+
+.click-number .label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.click-trend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #10b981;
+}
+
+.click-trend i {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Dashboard Section */
+.stats-dashboard {
+    padding: 4rem 0;
+    background: #0f172a;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Cards */
+.detail-card, .qr-card, .actions-card, .insights-card {
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.detail-card.animate-in, .qr-card.animate-in, .actions-card.animate-in, .insights-card.animate-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.detail-card:hover, .qr-card:hover, .actions-card:hover, .insights-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+    font-size: 1.25rem;
+}
+
+.header-content h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.header-content p {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+/* URL Section */
+.url-section {
+    margin-bottom: 2rem;
+}
+
+.section-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 0.75rem;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.original-url-display {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.url-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.original-link {
+    color: #60a5fa;
+    text-decoration: none;
+    font-weight: 500;
+    word-break: break-all;
+}
+
+.original-link:hover {
+    color: #93c5fd;
+}
+
+.external-icon {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.875rem;
+}
+
+.copy-original-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.copy-original-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+}
+
+.stat-item.created .stat-icon {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.stat-item.updated .stat-icon {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.stat-item.expires .stat-icon {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.25rem;
+}
+
+.stat-time {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* URL ID Section */
+.url-id-section {
+    margin-top: 2rem;
+}
+
+.id-display {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.id-input {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.id-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.copy-id-btn {
+    background: rgba(71, 85, 105, 0.5);
+    color: rgba(255, 255, 255, 0.8);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.copy-id-btn:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+/* Sidebar Cards */
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* QR Card */
+.qr-display {
+    text-align: center;
+}
+
+.qr-container {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.qr-image {
+    max-width: 100%;
+    height: auto;
+}
+
+.qr-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.qr-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 0.875rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.qr-btn.primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.qr-btn.primary:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+}
+
+.qr-btn.secondary {
+    background: rgba(71, 85, 105, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+}
+
+.qr-btn.secondary:hover {
+    background: rgba(71, 85, 105, 0.5);
+    color: white;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border: none;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.5);
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.action-button:hover {
+    background: rgba(59, 130, 246, 0.2);
+    color: white;
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(59, 130, 246, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3b82f6;
+}
+
+.btn-content {
+    flex: 1;
+    text-align: left;
+}
+
+.btn-title {
+    display: block;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.btn-subtitle {
+    display: block;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 0.25rem;
+}
+
+/* Insights */
+.insight-item {
+    margin-bottom: 1.5rem;
+}
+
+.insight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.insight-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.insight-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+}
+
+.progress-container {
+    width: 100%;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(71, 85, 105, 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    border-radius: 4px;
+    transition: width 1s ease;
+}
+
+/* Performance Status */
+.performance-status {
+    margin-top: 2rem;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid;
+}
+
+.status-item.info {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.status-item.success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.status-item.good {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.status-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.status-item.info .status-icon {
+    background: #3b82f6;
+    color: white;
+}
+
+.status-item.success .status-icon {
+    background: #10b981;
+    color: white;
+}
+
+.status-item.good .status-icon {
+    background: #3b82f6;
+    color: white;
+}
+
+.status-content {
+    flex: 1;
+}
+
+.status-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 0.25rem;
+}
+
+.status-message {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Modal Styles */
+.modal-content {
+    background: #1e293b;
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    border-radius: 20px;
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+    padding: 1.5rem 2rem;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: white;
+}
+
+.modal-title i {
+    color: #3b82f6;
+}
+
+.btn-close {
+    filter: invert(1);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.qr-modal-content {
+    text-align: center;
+}
+
+.qr-display-large {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    display: inline-block;
+}
+
+.qr-image-large {
+    max-width: 100%;
+    height: auto;
+}
+
+.qr-info {
+    margin-bottom: 2rem;
+}
+
+.qr-description {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1rem;
+}
+
+.qr-url {
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.qr-url code {
+    color: #60a5fa;
+    font-size: 0.875rem;
+    background: none;
+    padding: 0;
+}
+
+.qr-actions-large {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.modal-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 0.875rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-btn.primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.modal-btn.primary:hover {
+    background: #2563eb;
+}
+
+.modal-btn.secondary {
+    background: rgba(71, 85, 105, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(71, 85, 105, 0.5);
+}
+
+.modal-btn.secondary:hover {
+    background: rgba(71, 85, 105, 0.5);
+    color: white;
+}
+
+/* Toast Styles */
+.toast-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 9999;
+}
+
+.toast {
+    background: #1e293b;
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    min-width: 300px;
+}
+
+.toast-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+}
+
+.toast-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toast-title {
+    flex: 1;
+    font-weight: 600;
+    color: white;
+}
+
+.toast-body {
+    padding: 1rem 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .dashboard-sidebar {
+        order: -1;
     }
 }
-</script> 
+
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .url-info {
+        flex-direction: column;
+        gap: 2rem;
+        text-align: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .original-url-display {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .url-content {
+        justify-content: center;
+    }
+    
+    .qr-actions-large {
+        flex-direction: column;
+    }
+}
+</style> 
