@@ -1,8 +1,12 @@
-import { 
-  UrlEntity, 
-  CreateUrlDto, 
-  CreateUrlResponseDto, 
-  UrlRedirectDto, 
+import {
+  UrlEntity,
+  CreateUrlDto,
+  CreateUrlResponseDto,
+  UrlRedirectDto,
+  UrlStatsDto,
+  SystemStatsDto,
+  BulkCreateUrlDto,
+  BulkCreateUrlResponseDto,
   UrlNotFoundError,
   InvalidUrlError,
   UrlService as IUrlService,
@@ -13,14 +17,15 @@ import { generateUniqueSlug } from '../utils/slugGenerator';
 import { config } from '../config';
 import { CacheService } from './CacheService';
 import { getQueueManager, QUEUE_NAMES, ClickProcessingJob } from '../queues/QueueManager';
+import { logger } from '../middleware/logger';
 
 export class UrlService implements IUrlService {
   private urlRepository: IUrlRepository;
   private cacheService: CacheService;
 
-  constructor(urlRepository: IUrlRepository) {
+  constructor(urlRepository: IUrlRepository, cacheService: CacheService) {
     this.urlRepository = urlRepository;
-    this.cacheService = new CacheService();
+    this.cacheService = cacheService;
   }
 
   async shortenUrl(dto: CreateUrlDto): Promise<CreateUrlResponseDto> {
@@ -34,6 +39,8 @@ export class UrlService implements IUrlService {
       // Check cache first for existing URL
       const cachedUrl = await this.cacheService.getCachedUrlByOriginal(normalizedUrl);
       if (cachedUrl && this.shouldReuseUrl(cachedUrl, dto.userId)) {
+        logger.info('URL reused from cache', { originalUrl: dto.originalUrl.substring(0, 50) + '...', shortSlug: cachedUrl.shortSlug });
+        
         // Return cached result
         return {
           id: cachedUrl.id,
@@ -51,6 +58,8 @@ export class UrlService implements IUrlService {
       // Check database for existing URL if not in cache
       const existingUrl = await this.urlRepository.findByOriginalUrl(normalizedUrl);
       if (existingUrl && this.shouldReuseUrl(existingUrl, dto.userId)) {
+        logger.info('URL reused from database', { originalUrl: dto.originalUrl.substring(0, 50) + '...', shortSlug: existingUrl.shortSlug });
+        
         // Cache the existing URL and return it
         await this.cacheService.cacheUrl(existingUrl.shortSlug, existingUrl);
         await this.cacheService.cacheUrlByOriginal(normalizedUrl, existingUrl);
@@ -82,6 +91,12 @@ export class UrlService implements IUrlService {
       // Invalidate aggregate caches (popular, recent, stats)
       await this.invalidateAggregateCaches();
 
+      logger.info('New URL created successfully', { 
+        originalUrl: dto.originalUrl.substring(0, 50) + '...', 
+        shortSlug: newUrl.shortSlug,
+        userId: dto.userId || 'anonymous'
+      });
+
       return {
         id: newUrl.id,
         originalUrl: newUrl.originalUrl,
@@ -96,7 +111,10 @@ export class UrlService implements IUrlService {
       if (error instanceof InvalidUrlError) {
         throw error;
       }
-      console.error('Error shortening URL:', error);
+      logger.error('Error shortening URL', error as Error, { 
+        originalUrl: dto.originalUrl.substring(0, 50) + '...',
+        userId: dto.userId || 'anonymous'
+      });
       throw new Error('Failed to shorten URL');
     }
   }
@@ -116,6 +134,7 @@ export class UrlService implements IUrlService {
 
         // Cache the URL for future requests
         await this.cacheService.cacheUrl(slug, url);
+        logger.debug('URL cached after database lookup', { slug });
       }
 
       // Check if URL has expired
@@ -130,6 +149,13 @@ export class UrlService implements IUrlService {
       const currentClickCount = await this.cacheService.getClickCount(slug);
       const totalClickCount = url.clickCount + currentClickCount;
 
+      logger.debug('URL redirect processed', { 
+        slug, 
+        isExpired, 
+        totalClickCount,
+        ip: ip || 'unknown'
+      });
+
       return {
         originalUrl: url.originalUrl,
         clickCount: totalClickCount, // Return the real-time click count
@@ -140,12 +166,12 @@ export class UrlService implements IUrlService {
       if (error instanceof UrlNotFoundError) {
         throw error;
       }
-      console.error('Error redirecting URL:', error);
+      logger.error('Error redirecting URL', error as Error, { slug, ip: ip || 'unknown' });
       throw new Error('Failed to redirect URL');
     }
   }
 
-  async getUrlStats(slug: string): Promise<UrlEntity> {
+  async getUrlStats(slug: string): Promise<UrlStatsDto> {
     try {
       // Check cache first
       let url = await this.cacheService.getCachedUrl(slug);
@@ -166,26 +192,45 @@ export class UrlService implements IUrlService {
       const redisClickCount = await this.cacheService.getClickCount(slug);
       const totalClickCount = url.clickCount + redisClickCount;
       
-      // Return URL with updated click count
+      // Calculate days since creation
+      const daysSinceCreation = Math.floor((Date.now() - url.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Check if URL is expired
+      const isExpired = url.expiresAt ? new Date() > url.expiresAt : false;
+      
+      logger.debug('URL stats retrieved', { slug, totalClickCount });
+      
+      // Return UrlStatsDto with all required fields
       return {
-        ...url,
+        id: url.id,
+        originalUrl: url.originalUrl,
+        shortSlug: url.shortSlug,
+        shortUrl: `${config.server.baseUrl}/${url.shortSlug}`,
         clickCount: totalClickCount,
+        createdAt: url.createdAt,
+        updatedAt: url.updatedAt,
+        expiresAt: url.expiresAt,
+        isExpired,
+        daysSinceCreation,
+        userId: url.userId,
       };
 
     } catch (error) {
       if (error instanceof UrlNotFoundError) {
         throw error;
       }
-      console.error('Error getting URL stats:', error);
+      logger.error('Error getting URL stats', error as Error, { slug });
       throw new Error('Failed to get URL statistics');
     }
   }
 
   async getUrlById(id: string): Promise<UrlEntity | null> {
     try {
-      return await this.urlRepository.findById(id);
+      const url = await this.urlRepository.findById(id);
+      logger.debug('URL retrieved by ID', { id, found: !!url });
+      return url;
     } catch (error) {
-      console.error('Error getting URL by ID:', error);
+      logger.error('Error getting URL by ID', error as Error, { id });
       throw new Error('Failed to get URL by ID');
     }
   }
@@ -200,6 +245,7 @@ export class UrlService implements IUrlService {
 
       // Check ownership if userId is provided
       if (userId && url.userId !== userId) {
+        logger.warn('Unauthorized URL deletion attempt', { slug, requestUserId: userId, urlUserId: url.userId });
         throw new Error('Unauthorized: You can only delete your own URLs');
       }
 
@@ -209,22 +255,24 @@ export class UrlService implements IUrlService {
       // Invalidate all related caches
       await this.cacheService.invalidateUrlRelatedCache(slug, url.originalUrl);
 
-      console.log(`URL with slug '${slug}' deleted successfully`);
+      logger.info('URL deleted successfully', { slug, userId: userId || 'anonymous' });
 
     } catch (error) {
       if (error instanceof UrlNotFoundError) {
         throw error;
       }
-      console.error('Error deleting URL:', error);
+      logger.error('Error deleting URL', error as Error, { slug, userId: userId || 'anonymous' });
       throw new Error('Failed to delete URL');
     }
   }
 
   async getUserUrls(userId: string, limit: number = 50, offset: number = 0): Promise<UrlEntity[]> {
     try {
-      return await this.urlRepository.findByUserId(userId, limit, offset);
+      const urls = await this.urlRepository.findByUserId(userId, limit, offset);
+      logger.debug('User URLs retrieved', { userId, count: urls.length, limit, offset });
+      return urls;
     } catch (error) {
-      console.error('Error getting user URLs:', error);
+      logger.error('Error getting user URLs', error as Error, { userId, limit, offset });
       throw new Error('Failed to get user URLs');
     }
   }
@@ -234,6 +282,7 @@ export class UrlService implements IUrlService {
       // Get from cache first
       const cachedUrls = await this.cacheService.getCachedPopularUrls();
       if (cachedUrls) {
+        logger.debug('Popular URLs retrieved from cache', { count: cachedUrls.length });
         return cachedUrls;
       }
 
@@ -254,9 +303,10 @@ export class UrlService implements IUrlService {
       // Cache the results
       await this.cacheService.cachePopularUrls(updatedUrls);
 
+      logger.debug('Popular URLs retrieved from database', { count: updatedUrls.length });
       return updatedUrls;
     } catch (error) {
-      console.error('Error getting popular URLs:', error);
+      logger.error('Error getting popular URLs', error as Error, { limit });
       throw new Error('Failed to get popular URLs');
     }
   }
@@ -266,6 +316,7 @@ export class UrlService implements IUrlService {
       // Get from cache first
       const cachedUrls = await this.cacheService.getCachedRecentUrls();
       if (cachedUrls) {
+        logger.debug('Recent URLs retrieved from cache', { count: cachedUrls.length });
         return cachedUrls;
       }
 
@@ -286,19 +337,21 @@ export class UrlService implements IUrlService {
       // Cache the results
       await this.cacheService.cacheRecentUrls(updatedUrls);
 
+      logger.debug('Recent URLs retrieved from database', { count: updatedUrls.length });
       return updatedUrls;
     } catch (error) {
-      console.error('Error getting recent URLs:', error);
+      logger.error('Error getting recent URLs', error as Error, { limit });
       throw new Error('Failed to get recent URLs');
     }
   }
 
-  async getSystemStats(): Promise<Record<string, unknown>> {
+  async getSystemStats(): Promise<SystemStatsDto> {
     try {
       // Check cache first
       const cachedStats = await this.cacheService.getCachedSystemStats();
       if (cachedStats) {
-        return cachedStats;
+        logger.debug('System stats retrieved from cache');
+        return cachedStats as unknown as SystemStatsDto;
       }
 
       // Calculate stats from database
@@ -307,19 +360,22 @@ export class UrlService implements IUrlService {
         this.urlRepository.getTotalClickCount(),
       ]);
 
-      const stats = {
+      const stats: SystemStatsDto = {
         totalUrls,
         totalClicks,
         averageClicksPerUrl: totalUrls > 0 ? Math.round(totalClicks / totalUrls) : 0,
+        activeUrls: totalUrls, // TODO: Implement active URLs calculation
+        expiredUrls: 0, // TODO: Implement expired URLs calculation
         timestamp: new Date().toISOString(),
       };
 
       // Cache the stats
-      await this.cacheService.cacheSystemStats(stats);
+      await this.cacheService.cacheSystemStats(stats as unknown as Record<string, unknown>);
 
+      logger.debug('System stats calculated from database', { totalUrls, totalClicks });
       return stats;
     } catch (error) {
-      console.error('Error getting system stats:', error);
+      logger.error('Error getting system stats', error as Error);
       throw new Error('Failed to get system statistics');
     }
   }
@@ -328,6 +384,8 @@ export class UrlService implements IUrlService {
     try {
       const results: CreateUrlResponseDto[] = [];
 
+      logger.info('Starting bulk URL creation', { count: urls.length });
+
       // Process each URL
       for (const urlDto of urls) {
         try {
@@ -335,7 +393,9 @@ export class UrlService implements IUrlService {
           results.push(result);
         } catch (error) {
           // Continue processing other URLs even if one fails
-          console.error(`Failed to create URL ${urlDto.originalUrl}:`, error);
+          logger.error('Failed to create URL in batch', error as Error, { 
+            originalUrl: urlDto.originalUrl.substring(0, 50) + '...' 
+          });
           results.push({
             id: '',
             originalUrl: urlDto.originalUrl,
@@ -349,9 +409,18 @@ export class UrlService implements IUrlService {
         }
       }
 
+      const successCount = results.filter(r => !r.error).length;
+      const failureCount = results.length - successCount;
+      
+      logger.info('Bulk URL creation completed', { 
+        total: urls.length, 
+        success: successCount, 
+        failures: failureCount 
+      });
+
       return results;
     } catch (error) {
-      console.error('Error creating multiple URLs:', error);
+      logger.error('Error creating multiple URLs', error as Error, { count: urls.length });
       throw new Error('Failed to create multiple URLs');
     }
   }
@@ -365,12 +434,12 @@ export class UrlService implements IUrlService {
       const poolSlug = await poolHandler.getSlugFromPool();
       
       if (poolSlug) {
-        console.log(`Using slug from pool: ${poolSlug}`);
+        logger.debug('Using slug from pool', { slug: poolSlug });
         return poolSlug;
       }
       
       // If pool is empty, fallback to generating a new slug
-      console.log('Pool is empty, generating new slug...');
+      logger.debug('Pool is empty, generating new slug');
       const existingSlugChecker = async (slug: string): Promise<boolean> => {
         // Check cache first
         const cachedUrl = await this.cacheService.getCachedUrl(slug);
@@ -385,7 +454,7 @@ export class UrlService implements IUrlService {
 
       return generateUniqueSlug({ existingSlugChecker });
     } catch (error) {
-      console.error('Error getting slug from pool, falling back to generation:', error);
+      logger.error('Error getting slug from pool, falling back to generation', error as Error);
       
       // Fallback to original generation method
       const existingSlugChecker = async (slug: string): Promise<boolean> => {
@@ -437,8 +506,10 @@ export class UrlService implements IUrlService {
         { priority: 1 } // Higher priority for click processing
       );
 
+      logger.debug('Click processing job queued', { slug, ip: ip || 'unknown' });
+
     } catch (error) {
-      console.error('Failed to queue click processing job:', error);
+      logger.error('Failed to queue click processing job', error as Error, { slug });
       // Fallback to synchronous click counting if queue fails
       await this.incrementClickCountFallback(slug);
     }
@@ -455,8 +526,10 @@ export class UrlService implements IUrlService {
       // Invalidate cached URL to force refresh
       await this.cacheService.invalidateUrlCache(slug);
 
+      logger.debug('Click count incremented via fallback', { slug });
+
     } catch (error) {
-      console.error(`Failed to increment click count for slug ${slug}:`, error);
+      logger.error('Failed to increment click count via fallback', error as Error, { slug });
       // Don't throw here - click counting failures shouldn't break redirects
     }
   }
@@ -469,9 +542,28 @@ export class UrlService implements IUrlService {
         this.cacheService.getCachedSystemStats(),
       ].map(promise => promise.catch(() => null))); // Ignore cache errors
 
+      logger.debug('Aggregate caches invalidated');
+
     } catch (error) {
-      console.error('Failed to invalidate aggregate caches:', error);
+      logger.error('Failed to invalidate aggregate caches', error as Error);
       // Don't throw - cache invalidation failures shouldn't break the main flow
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async createBulkUrls(dto: BulkCreateUrlDto): Promise<BulkCreateUrlResponseDto> {
+    // TODO: Implement bulk URL creation with options
+    throw new Error('Bulk URL creation not implemented yet');
+  }
+
+  async cleanupExpiredUrls(): Promise<number> {
+    try {
+      // TODO: Implement expired URL cleanup
+      logger.info('Expired URL cleanup not implemented yet');
+      return 0;
+    } catch (error) {
+      logger.error('Error cleaning up expired URLs', error as Error);
+      throw new Error('Failed to cleanup expired URLs');
     }
   }
 } 
