@@ -8,13 +8,13 @@ jest.mock('@prisma/client');
 
 describe('PrismaUrlRepository', () => {
   let prismaUrlRepository: PrismaUrlRepository;
-  let mockPrismaClient: jest.Mocked<PrismaClient>;
+  let mockPrismaClient: any;
 
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
 
-    // Create mock Prisma client
+    // Create mock Prisma client with proper Jest mocks
     mockPrismaClient = {
       url: {
         create: jest.fn(),
@@ -25,14 +25,15 @@ describe('PrismaUrlRepository', () => {
         delete: jest.fn(),
         deleteMany: jest.fn(),
         count: jest.fn(),
-        aggregate: jest.fn()
+        aggregate: jest.fn(),
+        createMany: jest.fn()
       },
       $queryRaw: jest.fn(),
       $disconnect: jest.fn()
-    } as any;
+    };
 
     // Create repository instance
-    prismaUrlRepository = new PrismaUrlRepository(mockPrismaClient);
+    prismaUrlRepository = new PrismaUrlRepository(mockPrismaClient as PrismaClient);
   });
 
   describe('create', () => {
@@ -64,7 +65,8 @@ describe('PrismaUrlRepository', () => {
           originalUrl: urlData.originalUrl,
           shortSlug: urlData.shortSlug,
           clickCount: urlData.clickCount,
-          userId: urlData.userId
+          userId: urlData.userId,
+          expiresAt: null
         }
       });
 
@@ -96,7 +98,7 @@ describe('PrismaUrlRepository', () => {
       mockPrismaClient.url.create.mockRejectedValue(prismaError);
 
       await expect(prismaUrlRepository.create(urlData))
-        .rejects.toThrow('Unique constraint failed');
+        .rejects.toThrow('Short slug \'abc123\' already exists');
     });
   });
 
@@ -199,7 +201,8 @@ describe('PrismaUrlRepository', () => {
       const result = await prismaUrlRepository.findByOriginalUrl(originalUrl);
 
       expect(mockPrismaClient.url.findFirst).toHaveBeenCalledWith({
-        where: { originalUrl }
+        where: { originalUrl },
+        orderBy: { createdAt: 'desc' }
       });
 
       expect(result).toEqual({
@@ -238,7 +241,8 @@ describe('PrismaUrlRepository', () => {
         data: {
           clickCount: {
             increment: 1
-          }
+          },
+          updatedAt: expect.any(Date)
         }
       });
     });
@@ -277,7 +281,8 @@ describe('PrismaUrlRepository', () => {
         data: {
           clickCount: {
             increment: incrementAmount
-          }
+          },
+          updatedAt: expect.any(Date)
         }
       });
     });
@@ -347,7 +352,7 @@ describe('PrismaUrlRepository', () => {
       mockPrismaClient.url.delete.mockRejectedValue(new Error('Record to delete does not exist'));
 
       await expect(prismaUrlRepository.deleteBySlug(slug))
-        .rejects.toThrow('Record to delete does not exist');
+        .rejects.toThrow('URL with slug \'nonexistent\' not found');
     });
   });
 
@@ -488,7 +493,8 @@ describe('PrismaUrlRepository', () => {
       expect(mockPrismaClient.url.findMany).toHaveBeenCalledWith({
         where: {
           expiresAt: {
-            lt: expect.any(Date)
+            lt: expect.any(Date),
+            not: null
           }
         },
         take: limit,
@@ -512,7 +518,8 @@ describe('PrismaUrlRepository', () => {
       expect(mockPrismaClient.url.deleteMany).toHaveBeenCalledWith({
         where: {
           expiresAt: {
-            lt: expect.any(Date)
+            lt: expect.any(Date),
+            not: null
           }
         }
       });
@@ -555,7 +562,8 @@ describe('PrismaUrlRepository', () => {
       const result = await prismaUrlRepository.createMany(urlsData);
 
       expect(mockPrismaClient.url.createMany).toHaveBeenCalledWith({
-        data: urlsData
+        data: urlsData.map(url => ({ ...url, expiresAt: null })),
+        skipDuplicates: true
       });
 
       expect(result).toHaveLength(2);
