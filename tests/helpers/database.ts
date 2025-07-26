@@ -8,13 +8,17 @@ export async function setupTestDatabase(): Promise<Pool> {
     return testPool;
   }
 
+  // Parse connection string to extract database components
+  const connectionString = config.database.connectionString;
+  const url = new URL(connectionString);
+  
   // Create a test database connection
   testPool = new Pool({
-    host: config.database.host,
-    port: config.database.port,
-    database: config.database.database + '_test', // Use separate test database
-    user: config.database.username,
-    password: config.database.password,
+    host: url.hostname,
+    port: parseInt(url.port, 10),
+    database: url.pathname.slice(1) + '_test', // Remove leading slash and add _test suffix
+    user: url.username,
+    password: url.password,
     max: 5, // Lower connection limit for tests
     idleTimeoutMillis: 1000,
     connectionTimeoutMillis: 1000,
