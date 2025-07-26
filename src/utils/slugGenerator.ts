@@ -1,12 +1,13 @@
 import { customAlphabet } from 'nanoid';
 import { nanoidConfig } from '../config';
 import { SlugGenerationError } from '../types';
+import { logger } from '../middleware/logger';
 
 // Create a custom nanoid generator with our alphabet and size
 const generateId = customAlphabet(nanoidConfig.alphabet, nanoidConfig.size);
 
 // Interface for slug generation options
-interface SlugGenerationOptions {
+export interface SlugGenerationOptions {
   maxRetries?: number;
   existingSlugChecker?: (slug: string) => Promise<boolean>;
 }
@@ -45,7 +46,7 @@ export async function generateUniqueSlug(options: SlugGenerationOptions = {}): P
       return slug;
     } catch (error) {
       attempts++;
-      console.error(`Slug generation attempt ${attempts} failed:`, error);
+      logger.error(`Slug generation attempt ${attempts} failed`, error as Error);
     }
   }
 
@@ -183,7 +184,7 @@ export function createSlugChecker(repository: { findBySlug: (slug: string) => Pr
       const existing = await repository.findBySlug(slug);
       return existing !== null;
     } catch (error) {
-      console.error('Error checking slug existence:', error);
+      logger.error('Error checking slug existence', error as Error);
       // In case of error, assume it exists to be safe
       return true;
     }
@@ -227,8 +228,9 @@ export function generateReadableSlug(url: string): string {
     }
     
     return slug;
-  } catch {
+  } catch (error) {
     // If anything goes wrong, fall back to regular slug
+    logger.error('Error generating readable slug', error as Error);
     return generateSlug();
   }
 } 

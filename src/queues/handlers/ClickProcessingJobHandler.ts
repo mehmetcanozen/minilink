@@ -1,6 +1,6 @@
 import { CacheService } from '../../services/CacheService';
 import { PrismaUrlRepository } from '../../repositories/PrismaUrlRepository';
-import { getPrismaClient } from '../../config/prisma';
+import { logger } from '../../middleware/logger';
 
 export interface ClickProcessingJob {
   slug: string;
@@ -13,16 +13,16 @@ export class ClickProcessingJobHandler {
   private cacheService: CacheService;
   private urlRepository: PrismaUrlRepository;
 
-  constructor() {
-    this.cacheService = new CacheService();
-    this.urlRepository = new PrismaUrlRepository(getPrismaClient());
+  constructor(cacheService: CacheService, urlRepository: PrismaUrlRepository) {
+    this.cacheService = cacheService;
+    this.urlRepository = urlRepository;
   }
 
   async process(job: { data: ClickProcessingJob }): Promise<void> {
     const { slug, userAgent, ip, timestamp } = job.data;
 
     try {
-      console.log(`Processing click for slug: ${slug}`);
+      logger.debug(`Processing click for slug: ${slug}`, { userAgent, ip, timestamp });
 
       // Increment Redis click count for this slug
       const newClickCount = await this.cacheService.incrementClickCount(slug);
@@ -36,15 +36,15 @@ export class ClickProcessingJobHandler {
         // Reset Redis counter after successful sync
         await this.cacheService.resetClickCount(slug);
         
-        console.log(`Synced ${newClickCount} clicks for slug ${slug} to database`);
+        logger.info(`Synced ${newClickCount} clicks for slug ${slug} to database`);
       }
 
       // Log analytics data (optional - for future analytics features)
       await this.logAnalytics(slug, userAgent, ip, timestamp);
 
-    } catch (_error) {
-      console.error('Failed to process click job:', _error);
-      throw _error; // Re-throw to trigger BullMQ retry mechanism
+    } catch (error) {
+      logger.error('Failed to process click job', error as Error, { slug, userAgent, ip });
+      throw error; // Re-throw to trigger BullMQ retry mechanism
     }
   }
 
@@ -78,9 +78,10 @@ export class ClickProcessingJobHandler {
       // Invalidate URL cache to ensure fresh data on next request
       await this.cacheService.invalidateUrlCache(slug);
       
-    } catch (_error) {
-      console.error(`Failed to sync click count for slug ${slug}:`, _error);
-      throw _error;
+      logger.debug(`Synced click count for slug ${slug}`, { incrementAmount });
+    } catch (error) {
+      logger.error(`Failed to sync click count for slug ${slug}`, error as Error, { incrementAmount });
+      throw error;
     }
   }
 
@@ -90,13 +91,18 @@ export class ClickProcessingJobHandler {
       const anonymizedIP = ip ? this.anonymizeIP(ip) : 'unknown';
       const browserInfo = userAgent ? this.extractBrowserInfo(userAgent) : 'unknown';
       
-      console.log(`Analytics: ${slug} | ${anonymizedIP} | ${browserInfo} | ${timestamp}`);
+      logger.debug(`Analytics: ${slug} | ${anonymizedIP} | ${browserInfo} | ${timestamp}`, {
+        slug,
+        anonymizedIP,
+        browserInfo,
+        timestamp,
+      });
       
       // TODO: Store in analytics table or send to analytics service
       
-    } catch (_error) {
+    } catch (error) {
       // Don't throw here - analytics failures shouldn't break click processing
-      console.warn('Failed to log analytics:', _error);
+      logger.warn('Failed to log analytics', { slug, error: error instanceof Error ? error.message : String(error) });
     }
   }
 
@@ -125,7 +131,17 @@ export class ClickProcessingJobHandler {
       this.syncClickCountToDatabase(slug, count)
     );
     
-    await Promise.allSettled(promises);
+    const results = await Promise.allSettled(promises);
+    
+    // Log results
+    const successful = results.filter(result => result.status === 'fulfilled').length;
+    const failed = results.filter(result => result.status === 'rejected').length;
+    
+    logger.info(`Batch sync completed`, { 
+      total: slugCounts.length, 
+      successful, 
+      failed 
+    });
   }
 
   // Health check for the job handler
@@ -138,8 +154,8 @@ export class ClickProcessingJobHandler {
       // This is a simple test - in production you might want a dedicated health check method
       return true;
       
-    } catch (_error) {
-      console.error('Click processing job handler health check failed:', _error);
+    } catch (error) {
+      logger.error('Click processing job handler health check failed', error as Error);
       return false;
     }
   }

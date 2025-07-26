@@ -1,6 +1,6 @@
 import { CacheService } from '../../services/CacheService';
 import { PrismaUrlRepository } from '../../repositories/PrismaUrlRepository';
-import { getPrismaClient } from '../../config/prisma';
+import { logger } from '../../middleware/logger';
 
 export interface CacheSyncJob {
   slug: string;
@@ -12,16 +12,16 @@ export class CacheSyncJobHandler {
   private cacheService: CacheService;
   private urlRepository: PrismaUrlRepository;
 
-  constructor() {
-    this.cacheService = new CacheService();
-    this.urlRepository = new PrismaUrlRepository(getPrismaClient());
+  constructor(cacheService: CacheService, urlRepository: PrismaUrlRepository) {
+    this.cacheService = cacheService;
+    this.urlRepository = urlRepository;
   }
 
   async process(job: { data: CacheSyncJob }): Promise<void> {
-    const { slug, operation, data } = job.data;
+    const { slug, operation } = job.data;
 
     try {
-      console.log(`Processing cache sync job: ${operation} for slug ${slug}`);
+      logger.info(`Processing cache sync job`, { operation, slug });
 
       switch (operation) {
         case 'sync':
@@ -31,11 +31,11 @@ export class CacheSyncJobHandler {
           await this.invalidateUrlCache(slug);
           break;
         default:
-          console.warn(`Unknown cache operation: ${operation}`);
+          logger.warn(`Unknown cache operation`, { operation, slug });
       }
 
     } catch (error) {
-      console.error('Failed to process cache sync job:', error);
+      logger.error('Failed to process cache sync job', error as Error, { operation, slug });
       throw error;
     }
   }
@@ -48,12 +48,12 @@ export class CacheSyncJobHandler {
       if (url) {
         // Cache the URL
         await this.cacheService.cacheUrl(slug, url);
-        console.log(`Synced URL ${slug} to cache`);
+        logger.info(`Synced URL to cache`, { slug });
       } else {
-        console.warn(`URL ${slug} not found in database, cannot sync to cache`);
+        logger.warn(`URL not found in database, cannot sync to cache`, { slug });
       }
     } catch (error) {
-      console.error(`Failed to sync URL ${slug} to cache:`, error);
+      logger.error(`Failed to sync URL to cache`, error as Error, { slug });
       throw error;
     }
   }
@@ -66,23 +66,38 @@ export class CacheSyncJobHandler {
       // Also invalidate related caches
       await this.cacheService.invalidateUrlRelatedCache(slug);
       
-      console.log(`Invalidated cache for URL ${slug}`);
+      logger.info(`Invalidated cache for URL`, { slug });
     } catch (error) {
-      console.error(`Failed to invalidate cache for URL ${slug}:`, error);
+      logger.error(`Failed to invalidate cache for URL`, error as Error, { slug });
       throw error;
     }
   }
 
   // Batch sync multiple URLs
   async batchSyncUrls(slugs: string[]): Promise<void> {
-    const promises = slugs.map(slug => this.syncUrlToCache(slug));
-    await Promise.allSettled(promises);
+    try {
+      const promises = slugs.map(slug => this.syncUrlToCache(slug));
+      const results = await Promise.allSettled(promises);
+      
+      // Log results
+      const successful = results.filter(result => result.status === 'fulfilled').length;
+      const failed = results.filter(result => result.status === 'rejected').length;
+      
+      logger.info(`Batch sync completed`, { 
+        total: slugs.length, 
+        successful, 
+        failed 
+      });
+    } catch (error) {
+      logger.error('Failed to batch sync URLs', error as Error, { slugCount: slugs.length });
+      throw error;
+    }
   }
 
   // Warm up cache with popular URLs
   async warmCacheWithPopularUrls(limit: number = 50): Promise<void> {
     try {
-      console.log(`Warming cache with ${limit} popular URLs...`);
+      logger.info(`Warming cache with popular URLs`, { limit });
       
       const popularUrls = await this.urlRepository.getPopularUrls(limit);
       
@@ -90,9 +105,12 @@ export class CacheSyncJobHandler {
         await this.cacheService.cacheUrl(url.shortSlug, url);
       }
       
-      console.log(`Cache warmed with ${popularUrls.length} popular URLs`);
+      logger.info(`Cache warmed with popular URLs`, { 
+        requested: limit, 
+        actual: popularUrls.length 
+      });
     } catch (error) {
-      console.error('Failed to warm cache with popular URLs:', error);
+      logger.error('Failed to warm cache with popular URLs', error as Error, { limit });
       throw error;
     }
   }
@@ -104,9 +122,11 @@ export class CacheSyncJobHandler {
       await this.cacheService.isHealthy();
       
       // Test database connection through repository
+      await this.urlRepository.getTotalUrlCount();
+      
       return true;
     } catch (error) {
-      console.error('Cache sync job handler health check failed:', error);
+      logger.error('Cache sync job handler health check failed', error as Error);
       return false;
     }
   }

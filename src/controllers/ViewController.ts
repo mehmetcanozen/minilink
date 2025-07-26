@@ -1,6 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { UrlService } from '../services/UrlService';
 import { serverConfig } from '../config';
+import { logger } from '../middleware/logger';
+import * as ejs from 'ejs';
+import * as path from 'path';
 
 export class ViewController {
   private urlService: UrlService;
@@ -10,8 +13,10 @@ export class ViewController {
   }
 
   // Render home page
-  async renderHome(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async renderHome(req: Request, res: Response): Promise<void> {
     try {
+      logger.info('Rendering home page', { ip: req.ip, userAgent: req.get('User-Agent') });
+
       res.render('layout', {
         title: 'Home',
         currentPage: 'home',
@@ -20,13 +25,16 @@ export class ViewController {
         })
       });
     } catch (error) {
-      next(error);
+      logger.error('Failed to render home page', error as Error);
+      throw error;
     }
   }
 
   // Render dashboard page
-  async renderDashboard(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async renderDashboard(req: Request, res: Response): Promise<void> {
     try {
+      logger.info('Rendering dashboard page', { ip: req.ip, userAgent: req.get('User-Agent') });
+
       res.render('layout', {
         title: 'Dashboard',
         currentPage: 'stats',
@@ -35,16 +43,20 @@ export class ViewController {
         })
       });
     } catch (error) {
-      next(error);
+      logger.error('Failed to render dashboard page', error as Error);
+      throw error;
     }
   }
 
   // Render URL stats page
-  async renderUrlStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async renderUrlStats(req: Request, res: Response): Promise<void> {
     try {
       const slug = req.params.slug;
       
+      logger.info('Rendering URL stats page', { slug, ip: req.ip });
+      
       if (!slug) {
+        logger.warn('URL stats requested without slug');
         res.status(404).render('layout', {
           title: 'Not Found',
           currentPage: '',
@@ -61,6 +73,7 @@ export class ViewController {
       const urlStats = await this.urlService.getUrlStats(slug);
       
       if (!urlStats) {
+        logger.warn('URL stats not found', { slug });
         res.status(404).render('layout', {
           title: 'Not Found',
           currentPage: '',
@@ -75,6 +88,8 @@ export class ViewController {
         return;
       }
 
+      logger.info('URL stats page rendered successfully', { slug });
+
       res.render('layout', {
         title: `Stats for ${slug}`,
         currentPage: 'stats',
@@ -86,23 +101,35 @@ export class ViewController {
         })
       });
     } catch (error) {
-      next(error);
+      logger.error('Failed to render URL stats page', error as Error, { slug: req.params.slug });
+      throw error;
     }
   }
 
   // Handle 404 for frontend routes
   async render404(req: Request, res: Response): Promise<void> {
-    res.status(404).render('layout', {
-      title: 'Page Not Found',
-      currentPage: '',
-      body: await renderTemplate('error', {
-        title: '404 - Page Not Found',
-        message: 'The page you are looking for does not exist.',
-        statusCode: 404,
-        backLink: '/',
-        backLinkText: 'Go Home'
-      })
-    });
+    try {
+      logger.info('Rendering 404 page', { 
+        path: req.path, 
+        ip: req.ip, 
+        userAgent: req.get('User-Agent') 
+      });
+
+      res.status(404).render('layout', {
+        title: 'Page Not Found',
+        currentPage: '',
+        body: await renderTemplate('error', {
+          title: '404 - Page Not Found',
+          message: 'The page you are looking for does not exist.',
+          statusCode: 404,
+          backLink: '/',
+          backLinkText: 'Go Home'
+        })
+      });
+    } catch (error) {
+      logger.error('Failed to render 404 page', error as Error);
+      throw error;
+    }
   }
 
   // Bind methods to ensure proper `this` context
@@ -118,14 +145,14 @@ export class ViewController {
 
 // Helper function to render partial templates
 async function renderTemplate(template: string, data: Record<string, unknown> = {}): Promise<string> {
-  const ejs = await import('ejs');
-  const path = await import('path');
-  
   try {
+    // Sanitize any user-provided data to prevent SSTI
+    const sanitizedData = sanitizeTemplateData(data);
+    
     const templatePath = path.join(__dirname, '../views', `${template}.ejs`);
-    return await ejs.renderFile(templatePath, data);
+    return await ejs.renderFile(templatePath, sanitizedData);
   } catch (error) {
-    console.error(`Error rendering template ${template}:`, error);
+    logger.error(`Error rendering template ${template}`, error as Error, { template, dataKeys: Object.keys(data) });
     
     // Fallback error template
     return `
@@ -141,4 +168,27 @@ async function renderTemplate(template: string, data: Record<string, unknown> = 
       </div>
     `;
   }
+}
+
+// Sanitize template data to prevent Server-Side Template Injection (SSTI)
+function sanitizeTemplateData(data: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string') {
+      // Remove any potential script tags or dangerous HTML
+      sanitized[key] = value
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+\s*=/gi, '');
+    } else if (typeof value === 'object' && value !== null) {
+      // Recursively sanitize nested objects
+      sanitized[key] = sanitizeTemplateData(value as Record<string, unknown>);
+    } else {
+      // Pass through other types (numbers, booleans, etc.)
+      sanitized[key] = value;
+    }
+  }
+  
+  return sanitized;
 } 

@@ -1,6 +1,17 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { UrlService } from '../services/UrlService';
-import { CreateUrlDto, CreateUrlResponseDto, ApiResponse, ErrorResponse } from '../types';
+import { CreateUrlResponseDto, ApiResponse, ErrorResponse, InvalidUrlError } from '../types';
+import { 
+  createUrlSchema, 
+  slugSchema, 
+  urlQuerySchema,
+  systemStatsSchema,
+  CreateUrlDto,
+  UrlQueryDto,
+  SystemStatsDto
+} from '../schemas/url.schema';
+import { logger } from '../middleware/logger';
+import { z } from 'zod';
 
 export class UrlController {
   constructor(private urlService: UrlService) {}
@@ -18,7 +29,7 @@ export class UrlController {
     return this;
   }
 
-  async createShortUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createShortUrl(req: Request, res: Response): Promise<void> {
     try {
       const dto = this.validateCreateUrlDto(req.body);
 
@@ -29,13 +40,21 @@ export class UrlController {
         data: result,
       };
 
+      logger.info('URL shortened successfully', { 
+        originalUrl: dto.originalUrl.substring(0, 50) + '...', 
+        shortSlug: result.shortSlug 
+      });
+
       res.status(201).json(response);
     } catch (error) {
-      next(error);
+      logger.error('Failed to create short URL', error as Error, { 
+        originalUrl: req.body?.originalUrl?.substring(0, 50) + '...' 
+      });
+      throw error;
     }
   }
 
-  async redirectToOriginalUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async redirectToOriginalUrl(req: Request, res: Response): Promise<void> {
     try {
       const slug = this.validateSlug(req.params.slug);
       const userAgent = req.get('User-Agent');
@@ -43,13 +62,20 @@ export class UrlController {
 
       const redirectInfo = await this.urlService.redirectUrl(slug, userAgent, ip);
 
+      logger.info('URL redirect processed', { 
+        slug, 
+        clickCount: redirectInfo.clickCount,
+        isExpired: redirectInfo.isExpired 
+      });
+
       res.redirect(redirectInfo.originalUrl);
     } catch (error) {
-      next(error);
+      logger.error('Failed to redirect URL', error as Error, { slug: req.params.slug });
+      throw error;
     }
   }
 
-  async getUrlStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getUrlStats(req: Request, res: Response): Promise<void> {
     try {
       const slug = this.validateSlug(req.params.slug);
 
@@ -60,63 +86,78 @@ export class UrlController {
         data: urlStats,
       };
 
+      logger.info('URL stats retrieved', { slug });
+
       res.status(200).json(response);
     } catch (error) {
-      next(error);
+      logger.error('Failed to get URL stats', error as Error, { slug: req.params.slug });
+      throw error;
     }
   }
 
-  async deleteUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async deleteUrl(req: Request, res: Response): Promise<void> {
     try {
       const slug = this.validateSlug(req.params.slug);
+      // TODO: Get userId from authenticated user context, not from request body
+      const userId = req.body?.userId; // This should come from auth middleware
 
-      await this.urlService.deleteUrl(slug);
+      await this.urlService.deleteUrl(slug, userId);
 
       const response: ApiResponse<null> = {
         success: true,
         data: null,
       };
 
+      logger.info('URL deleted successfully', { slug, userId });
+
       res.status(200).json(response);
     } catch (error) {
-      next(error);
+      logger.error('Failed to delete URL', error as Error, { slug: req.params.slug });
+      throw error;
     }
   }
 
-  async getPopularUrls(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getPopularUrls(req: Request, res: Response): Promise<void> {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
-      const urls = await this.urlService.getPopularUrls(limit);
+      const query = this.validateUrlQuery(req.query);
+      const urls = await this.urlService.getPopularUrls(query.limit);
 
       const response: ApiResponse<typeof urls> = {
         success: true,
         data: urls,
       };
 
+      logger.info('Popular URLs retrieved', { limit: query.limit, count: urls.length });
+
       res.status(200).json(response);
     } catch (error) {
-      next(error);
+      logger.error('Failed to get popular URLs', error as Error);
+      throw error;
     }
   }
 
-  async getRecentUrls(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getRecentUrls(req: Request, res: Response): Promise<void> {
     try {
-      const limit = parseInt(req.query.limit as string) || 10;
-      const urls = await this.urlService.getRecentUrls(limit);
+      const query = this.validateUrlQuery(req.query);
+      const urls = await this.urlService.getRecentUrls(query.limit);
 
       const response: ApiResponse<typeof urls> = {
         success: true,
         data: urls,
       };
 
+      logger.info('Recent URLs retrieved', { limit: query.limit, count: urls.length });
+
       res.status(200).json(response);
     } catch (error) {
-      next(error);
+      logger.error('Failed to get recent URLs', error as Error);
+      throw error;
     }
   }
 
-  async getSystemStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getSystemStats(req: Request, res: Response): Promise<void> {
     try {
+      const query = this.validateSystemStatsQuery(req.query);
       const stats = await this.urlService.getSystemStats();
 
       const response: ApiResponse<typeof stats> = {
@@ -124,13 +165,16 @@ export class UrlController {
         data: stats,
       };
 
+      logger.info('System stats retrieved', { includeCache: query.includeCache, includeQueue: query.includeQueue });
+
       res.status(200).json(response);
     } catch (error) {
-      next(error);
+      logger.error('Failed to get system stats', error as Error);
+      throw error;
     }
   }
 
-  async createMultipleUrls(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async createMultipleUrls(req: Request, res: Response): Promise<void> {
     try {
       if (!Array.isArray(req.body)) {
         const errorResponse: ApiResponse<ErrorResponse> = {
@@ -138,6 +182,7 @@ export class UrlController {
           error: {
             message: 'Request body must be an array of URLs',
             code: 'INVALID_REQUEST',
+            timestamp: new Date().toISOString(),
           },
         };
         res.status(400).json(errorResponse);
@@ -152,7 +197,10 @@ export class UrlController {
           const dto = this.validateCreateUrlDto(req.body[i]);
           dtos.push(dto);
         } catch (error) {
-          errors.push(`Item ${i}: ${error instanceof Error ? error.message : 'Invalid URL'}`);
+          const errorMessage = error instanceof z.ZodError 
+            ? error.issues.map((e: z.ZodIssue) => e.message).join(', ')
+            : error instanceof Error ? error.message : 'Invalid URL';
+          errors.push(`Item ${i}: ${errorMessage}`);
         }
       }
 
@@ -163,6 +211,7 @@ export class UrlController {
             message: 'No valid URLs provided',
             code: 'NO_VALID_URLS',
             details: { errors },
+            timestamp: new Date().toISOString(),
           },
         };
         res.status(400).json(errorResponse);
@@ -176,9 +225,16 @@ export class UrlController {
         data: results,
       };
 
+      logger.info('Multiple URLs created successfully', { 
+        requested: req.body.length, 
+        successful: results.filter(r => !r.error).length,
+        failed: results.filter(r => r.error).length 
+      });
+
       res.status(201).json(response);
     } catch (error) {
-      next(error);
+      logger.error('Failed to create multiple URLs', error as Error, { count: req.body?.length });
+      throw error;
     }
   }
 
@@ -195,65 +251,52 @@ export class UrlController {
     res.status(200).json(response);
   }
 
-  // Validation methods
+  // Validation methods using Zod schemas
   private validateCreateUrlDto(data: unknown): CreateUrlDto {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Request body must be an object');
-    }
-
-    const { originalUrl, userId, expiresAt } = data as Record<string, unknown>;
-
-    if (!originalUrl || typeof originalUrl !== 'string') {
-      throw new Error('originalUrl is required and must be a string');
-    }
-
-    if (originalUrl.trim().length === 0) {
-      throw new Error('originalUrl cannot be empty');
-    }
-
-    // Basic URL validation
     try {
-      new URL(originalUrl);
-    } catch {
-      throw new Error('originalUrl must be a valid URL');
-    }
-
-    // Validate expiresAt if provided
-    let parsedExpiresAt: Date | undefined;
-    if (expiresAt) {
-      if (typeof expiresAt === 'string') {
-        parsedExpiresAt = new Date(expiresAt);
-        if (isNaN(parsedExpiresAt.getTime())) {
-          throw new Error('expiresAt must be a valid date string');
-        }
-      } else if (expiresAt instanceof Date) {
-        parsedExpiresAt = expiresAt;
-      } else {
-        throw new Error('expiresAt must be a valid date string or Date object');
+      return createUrlSchema.parse(data);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMessage = error.issues.map((e: z.ZodIssue) => e.message).join(', ');
+        throw new InvalidUrlError(errorMessage);
       }
+      throw error;
     }
-
-    return {
-      originalUrl: originalUrl.trim(),
-      expiresAt: parsedExpiresAt,
-      userId: userId && typeof userId === 'string' ? userId : undefined,
-    };
   }
 
   private validateSlug(slug: string): string {
-    if (!slug || typeof slug !== 'string') {
-      throw new Error('Slug is required and must be a string');
+    try {
+      return slugSchema.parse(slug);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMessage = error.issues.map((e: z.ZodIssue) => e.message).join(', ');
+        throw new InvalidUrlError(errorMessage);
+      }
+      throw error;
     }
+  }
 
-    if (slug.trim().length === 0) {
-      throw new Error('Slug cannot be empty');
+  private validateUrlQuery(query: unknown): UrlQueryDto {
+    try {
+      return urlQuerySchema.parse(query);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMessage = error.issues.map((e: z.ZodIssue) => e.message).join(', ');
+        throw new InvalidUrlError(errorMessage);
+      }
+      throw error;
     }
+  }
 
-    // More permissive slug validation (alphanumeric, hyphens, underscores, dots)
-    if (!/^[a-zA-Z0-9._-]+$/.test(slug)) {
-      throw new Error('Slug contains invalid characters');
+  private validateSystemStatsQuery(query: unknown): SystemStatsDto {
+    try {
+      return systemStatsSchema.parse(query);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMessage = error.issues.map((e: z.ZodIssue) => e.message).join(', ');
+        throw new InvalidUrlError(errorMessage);
+      }
+      throw error;
     }
-
-    return slug.trim();
   }
 } 

@@ -1,5 +1,35 @@
 import { PrismaClient } from '@prisma/client';
 import { UrlRepository as IUrlRepository, UrlEntity } from '../types';
+import { logger } from '../middleware/logger';
+
+// Custom error types for better error handling
+export class RepositoryError extends Error {
+  constructor(message: string, public readonly originalError?: Error) {
+    super(message);
+    this.name = 'RepositoryError';
+  }
+}
+
+export class DatabaseConnectionError extends Error {
+  constructor(message: string, public readonly originalError?: Error) {
+    super(message);
+    this.name = 'DatabaseConnectionError';
+  }
+}
+
+export class DuplicateResourceError extends Error {
+  constructor(message: string, public readonly resource?: string) {
+    super(message);
+    this.name = 'DuplicateResourceError';
+  }
+}
+
+export class ResourceNotFoundError extends Error {
+  constructor(message: string, public readonly resource?: string) {
+    super(message);
+    this.name = 'ResourceNotFoundError';
+  }
+}
 
 export class PrismaUrlRepository implements IUrlRepository {
   private prisma: PrismaClient;
@@ -22,8 +52,16 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return this.mapPrismaToEntity(result);
     } catch (error: unknown) {
-      console.error('Error creating URL:', error);
-      throw new Error(`Failed to create URL: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error creating URL', error as Error, { shortSlug: urlData.shortSlug });
+      
+      // Handle Prisma-specific errors
+      if (this.isPrismaError(error)) {
+        if (error.code === 'P2002') {
+          throw new DuplicateResourceError(`Short slug '${urlData.shortSlug}' already exists`, urlData.shortSlug);
+        }
+      }
+      
+      throw new RepositoryError(`Failed to create URL: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -35,8 +73,8 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return result ? this.mapPrismaToEntity(result) : null;
     } catch (error: unknown) {
-      console.error('Error finding URL by slug:', error);
-      throw new Error(`Failed to find URL by slug: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error finding URL by slug', error as Error, { slug });
+      throw new RepositoryError(`Failed to find URL by slug: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -48,8 +86,8 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return result ? this.mapPrismaToEntity(result) : null;
     } catch (error: unknown) {
-      console.error('Error finding URL by ID:', error);
-      throw new Error(`Failed to find URL by ID: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error finding URL by ID', error as Error, { id });
+      throw new RepositoryError(`Failed to find URL by ID: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -62,8 +100,8 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return result ? this.mapPrismaToEntity(result) : null;
     } catch (error: unknown) {
-      console.error('Error finding URL by original URL:', error);
-      throw new Error(`Failed to find URL by original URL: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error finding URL by original URL', error as Error, { originalUrl });
+      throw new RepositoryError(`Failed to find URL by original URL: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -78,11 +116,16 @@ export class PrismaUrlRepository implements IUrlRepository {
       });
 
       if (!result) {
-        throw new Error(`URL with slug '${slug}' not found`);
+        throw new ResourceNotFoundError(`URL with slug '${slug}' not found`, slug);
       }
     } catch (error: unknown) {
-      console.error('Error incrementing click count:', error);
-      throw new Error(`Failed to increment click count: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error incrementing click count', error as Error, { slug });
+      
+      if (error instanceof ResourceNotFoundError) {
+        throw error;
+      }
+      
+      throw new RepositoryError(`Failed to increment click count: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -99,11 +142,16 @@ export class PrismaUrlRepository implements IUrlRepository {
       });
 
       if (!result) {
-        throw new Error(`URL with slug '${slug}' not found`);
+        throw new ResourceNotFoundError(`URL with slug '${slug}' not found`, slug);
       }
     } catch (error: unknown) {
-      console.error('Error bulk incrementing click count:', error);
-      throw new Error(`Failed to bulk increment click count: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error bulk incrementing click count', error as Error, { slug, incrementAmount });
+      
+      if (error instanceof ResourceNotFoundError) {
+        throw error;
+      }
+      
+      throw new RepositoryError(`Failed to bulk increment click count: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -118,8 +166,8 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return results.map(result => this.mapPrismaToEntity(result));
     } catch (error: unknown) {
-      console.error('Error finding URLs by user ID:', error);
-      throw new Error(`Failed to find URLs by user ID: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error finding URLs by user ID', error as Error, { userId, limit, offset });
+      throw new RepositoryError(`Failed to find URLs by user ID: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -130,14 +178,19 @@ export class PrismaUrlRepository implements IUrlRepository {
       });
 
       if (!result) {
-        throw new Error(`URL with slug '${slug}' not found`);
+        throw new ResourceNotFoundError(`URL with slug '${slug}' not found`, slug);
       }
     } catch (error: unknown) {
-      if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
-        throw new Error(`URL with slug '${slug}' not found`);
+      if (error instanceof ResourceNotFoundError) {
+        throw error;
       }
-      console.error('Error deleting URL by slug:', error);
-      throw new Error(`Failed to delete URL: ${error instanceof Error ? error.message : String(error)}`);
+      
+      if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
+        throw new ResourceNotFoundError(`URL with slug '${slug}' not found`, slug);
+      }
+      
+      logger.error('Error deleting URL by slug', error as Error, { slug });
+      throw new RepositoryError(`Failed to delete URL: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -148,14 +201,19 @@ export class PrismaUrlRepository implements IUrlRepository {
       });
 
       if (!result) {
-        throw new Error(`URL with id '${id}' not found`);
+        throw new ResourceNotFoundError(`URL with id '${id}' not found`, id);
       }
     } catch (error: unknown) {
-      if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
-        throw new Error(`URL with id '${id}' not found`);
+      if (error instanceof ResourceNotFoundError) {
+        throw error;
       }
-      console.error('Error deleting URL by ID:', error);
-      throw new Error(`Failed to delete URL: ${error instanceof Error ? error.message : String(error)}`);
+      
+      if (error instanceof Error && error.message.includes('Record to delete does not exist')) {
+        throw new ResourceNotFoundError(`URL with id '${id}' not found`, id);
+      }
+      
+      logger.error('Error deleting URL by ID', error as Error, { id });
+      throw new RepositoryError(`Failed to delete URL: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -163,8 +221,8 @@ export class PrismaUrlRepository implements IUrlRepository {
     try {
       return await this.prisma.url.count();
     } catch (error: unknown) {
-      console.error('Error getting total URL count:', error);
-      throw new Error(`Failed to get total URL count: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error getting total URL count', error as Error);
+      throw new RepositoryError(`Failed to get total URL count: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -178,8 +236,8 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return result._sum.clickCount || 0;
     } catch (error: unknown) {
-      console.error('Error getting total click count:', error);
-      throw new Error(`Failed to get total click count: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error getting total click count', error as Error);
+      throw new RepositoryError(`Failed to get total click count: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -192,8 +250,8 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return results.map(result => this.mapPrismaToEntity(result));
     } catch (error: unknown) {
-      console.error('Error getting popular URLs:', error);
-      throw new Error(`Failed to get popular URLs: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error getting popular URLs', error as Error, { limit });
+      throw new RepositoryError(`Failed to get popular URLs: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -206,12 +264,56 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return results.map(result => this.mapPrismaToEntity(result));
     } catch (error: unknown) {
-      console.error('Error getting recent URLs:', error);
-      throw new Error(`Failed to get recent URLs: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error getting recent URLs', error as Error, { limit });
+      throw new RepositoryError(`Failed to get recent URLs: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
+  async getExpiredUrls(limit: number = 100): Promise<UrlEntity[]> {
+    try {
+      const results = await this.prisma.url.findMany({
+        where: {
+          expiresAt: {
+            not: null,
+            lt: new Date(),
+          },
+        },
+        orderBy: { expiresAt: 'asc' },
+        take: limit,
+      });
+
+      return results.map(result => this.mapPrismaToEntity(result));
+    } catch (error: unknown) {
+      logger.error('Error getting expired URLs', error as Error, { limit });
+      throw new RepositoryError(`Failed to get expired URLs: ${error instanceof Error ? error.message : String(error)}`, error as Error);
+    }
+  }
+
+  async deleteExpiredUrls(): Promise<number> {
+    try {
+      const result = await this.prisma.url.deleteMany({
+        where: {
+          expiresAt: {
+            not: null,
+            lt: new Date(),
+          },
+        },
+      });
+
+      logger.info('Deleted expired URLs', { count: result.count });
+      return result.count;
+    } catch (error: unknown) {
+      logger.error('Error deleting expired URLs', error as Error);
+      throw new RepositoryError(`Failed to delete expired URLs: ${error instanceof Error ? error.message : String(error)}`, error as Error);
+    }
+  }
+
+  // CRITICAL PERFORMANCE IMPROVEMENT: Use Prisma's true bulk createMany
   async createMany(urls: Omit<UrlEntity, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<UrlEntity[]> {
+    if (urls.length === 0) {
+      return [];
+    }
+
     try {
       const data = urls.map(url => ({
         originalUrl: url.originalUrl,
@@ -221,17 +323,34 @@ export class PrismaUrlRepository implements IUrlRepository {
         userId: url.userId || null,
       }));
 
-      // Prisma doesn't return created records from createMany, so we need to use transactions
-      const results = await this.prisma.$transaction(
-        data.map(urlData => 
-          this.prisma.url.create({ data: urlData })
-        )
-      );
+      // Use Prisma's true bulk createMany for maximum performance
+      // Note: createMany doesn't return created records, so we need to fetch them if needed
+      await this.prisma.url.createMany({
+        data,
+        skipDuplicates: true, // Skip duplicates instead of failing
+      });
 
-      return results.map(result => this.mapPrismaToEntity(result));
+      // If we need the created records, fetch them by their unique shortSlugs
+      // This is still much faster than individual creates
+      const shortSlugs = urls.map(url => url.shortSlug);
+      const createdUrls = await this.prisma.url.findMany({
+        where: {
+          shortSlug: {
+            in: shortSlugs,
+          },
+        },
+      });
+
+      logger.info('Bulk created URLs', { 
+        requested: urls.length, 
+        created: createdUrls.length,
+        skipped: urls.length - createdUrls.length 
+      });
+
+      return createdUrls.map(result => this.mapPrismaToEntity(result));
     } catch (error: unknown) {
-      console.error('Error creating multiple URLs:', error);
-      throw new Error(`Failed to create multiple URLs: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error('Error creating multiple URLs', error as Error, { count: urls.length });
+      throw new RepositoryError(`Failed to create multiple URLs: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -243,7 +362,7 @@ export class PrismaUrlRepository implements IUrlRepository {
     clickCount: number;
     createdAt: Date;
     updatedAt: Date;
-    expiresAt?: Date | null; // Make optional since Prisma client might not have it yet
+    expiresAt?: Date | null;
     userId: string | null;
   }): UrlEntity {
     return {
@@ -258,8 +377,25 @@ export class PrismaUrlRepository implements IUrlRepository {
     };
   }
 
+  // Helper method to check if error is a Prisma error
+  private isPrismaError(error: unknown): error is { code: string; message: string } {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      'message' in error &&
+      typeof (error as { code: string }).code === 'string'
+    );
+  }
+
   // Cleanup method for graceful shutdown
   async disconnect(): Promise<void> {
-    await this.prisma.$disconnect();
+    try {
+      await this.prisma.$disconnect();
+      logger.info('Prisma repository disconnected successfully');
+    } catch (error: unknown) {
+      logger.error('Error disconnecting Prisma repository', error as Error);
+      throw new RepositoryError('Failed to disconnect Prisma repository', error as Error);
+    }
   }
 } 

@@ -1,5 +1,10 @@
 import { Queue, Worker, Job } from 'bullmq';
-import { redisConfig } from '../config/redis';
+import { redisConfig } from '../config';
+import { logger } from '../middleware/logger';
+import { CacheService } from '../services/CacheService';
+import { PrismaUrlRepository } from '../repositories/PrismaUrlRepository';
+import { getPrismaClient } from '../config/prisma';
+import { createRedisCache } from '../config/redis';
 
 // Queue names
 export const QUEUE_NAMES = {
@@ -7,6 +12,7 @@ export const QUEUE_NAMES = {
   SHORT_CODE_POOL: 'short-code-pool',
   CACHE_SYNC: 'cache-sync',
   EXPIRED_URL_CLEANUP: 'expired-url-cleanup',
+  CACHE_WARM_UP: 'cache-warm-up',
 } as const;
 
 // Job types
@@ -29,6 +35,11 @@ export interface CacheSyncJob {
 }
 
 export interface ExpiredUrlCleanupJob {
+  timestamp: string;
+  batchSize?: number;
+}
+
+export interface CacheWarmUpJob {
   timestamp: string;
   batchSize?: number;
 }
@@ -67,6 +78,15 @@ export class QueueManager {
   private queues: Map<string, Queue> = new Map();
   private workers: Map<string, Worker> = new Map();
   private isShuttingDown = false;
+  private cacheService: CacheService;
+  private urlRepository: PrismaUrlRepository;
+
+  constructor() {
+    // Initialize dependencies
+    const redisCache = createRedisCache();
+    this.cacheService = new CacheService(redisCache);
+    this.urlRepository = new PrismaUrlRepository(getPrismaClient());
+  }
 
   // Initialize queues
   async initialize(): Promise<void> {
@@ -76,10 +96,11 @@ export class QueueManager {
       this.createQueue(QUEUE_NAMES.SHORT_CODE_POOL);
       this.createQueue(QUEUE_NAMES.CACHE_SYNC);
       this.createQueue(QUEUE_NAMES.EXPIRED_URL_CLEANUP);
+      this.createQueue(QUEUE_NAMES.CACHE_WARM_UP);
 
-      console.log('QueueManager initialized successfully');
+      logger.info('QueueManager initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize QueueManager:', error);
+      logger.error('Failed to initialize QueueManager', error as Error);
       throw error;
     }
   }
@@ -90,14 +111,14 @@ export class QueueManager {
 
     // Queue event handlers
     queue.on('error', (error: Error) => {
-      console.error(`Queue ${name} error:`, error);
+      logger.error(`Queue ${name} error`, error);
     });
 
     this.queues.set(name, queue);
     return queue;
   }
 
-  // Create a worker
+  // Create a worker with dependency injection
   createWorker<T = unknown>(
     queueName: string,
     processor: (job: Job<T>) => Promise<unknown>,
@@ -108,23 +129,23 @@ export class QueueManager {
 
     // Worker event handlers
     worker.on('error', (error: Error) => {
-      console.error(`Worker for queue ${queueName} error:`, error);
+      logger.error(`Worker for queue ${queueName} error`, error);
     });
 
     worker.on('ready', () => {
-      console.log(`Worker for queue ${queueName} is ready`);
+      logger.info(`Worker for queue ${queueName} is ready`);
     });
 
     worker.on('completed', (job: Job<T>) => {
-      console.log(`Worker completed job ${job.id} in queue ${queueName}`);
+      logger.debug(`Worker completed job ${job.id} in queue ${queueName}`);
     });
 
     worker.on('failed', (job: Job<T> | undefined, error: Error) => {
-      console.error(`Worker failed job ${job?.id} in queue ${queueName}:`, error);
+      logger.error(`Worker failed job ${job?.id} in queue ${queueName}`, error);
     });
 
     worker.on('stalled', (jobId: string) => {
-      console.warn(`Job ${jobId} stalled in queue ${queueName}`);
+      logger.warn(`Job ${jobId} stalled in queue ${queueName}`);
     });
 
     this.workers.set(queueName, worker);
@@ -157,7 +178,7 @@ export class QueueManager {
     try {
       const queue = this.getQueue(queueName);
       if (!queue) {
-        console.error(`Queue ${queueName} not found`);
+        logger.error(`Queue ${queueName} not found`);
         return undefined;
       }
 
@@ -166,10 +187,10 @@ export class QueueManager {
         ...options,
       });
 
-      console.log(`Job ${job.id} added to queue ${queueName}`);
+      logger.debug(`Job ${job.id} added to queue ${queueName}`, { jobName, queueName });
       return job;
     } catch (error) {
-      console.error(`Failed to add job to queue ${queueName}:`, error);
+      logger.error(`Failed to add job to queue ${queueName}`, error as Error, { jobName, queueName });
       return undefined;
     }
   }
@@ -198,7 +219,7 @@ export class QueueManager {
         delayed: delayed.length,
       };
     } catch (error) {
-      console.error(`Failed to get stats for queue ${queueName}:`, error);
+      logger.error(`Failed to get stats for queue ${queueName}`, error as Error);
       return null;
     }
   }
@@ -223,10 +244,10 @@ export class QueueManager {
       const queue = this.getQueue(queueName);
       if (queue) {
         await queue.pause();
-        console.log(`Queue ${queueName} paused`);
+        logger.info(`Queue ${queueName} paused`);
       }
     } catch (error) {
-      console.error(`Failed to pause queue ${queueName}:`, error);
+      logger.error(`Failed to pause queue ${queueName}`, error as Error);
     }
   }
 
@@ -236,10 +257,10 @@ export class QueueManager {
       const queue = this.getQueue(queueName);
       if (queue) {
         await queue.resume();
-        console.log(`Queue ${queueName} resumed`);
+        logger.info(`Queue ${queueName} resumed`);
       }
     } catch (error) {
-      console.error(`Failed to resume queue ${queueName}:`, error);
+      logger.error(`Failed to resume queue ${queueName}`, error as Error);
     }
   }
 
@@ -256,10 +277,10 @@ export class QueueManager {
           queue.clean(maxAge, maxCount, 'completed'),
           queue.clean(maxAge, maxCount, 'failed'),
         ]);
-        console.log(`Queue ${queueName} cleaned`);
+        logger.info(`Queue ${queueName} cleaned`, { maxAge, maxCount });
       }
     } catch (error) {
-      console.error(`Failed to clean queue ${queueName}:`, error);
+      logger.error(`Failed to clean queue ${queueName}`, error as Error);
     }
   }
 
@@ -271,9 +292,17 @@ export class QueueManager {
       }
       return true;
     } catch (error) {
-      console.error('Queue health check failed:', error);
+      logger.error('Queue health check failed', error as Error);
       return false;
     }
+  }
+
+  // Get dependencies for job handlers
+  getDependencies() {
+    return {
+      cacheService: this.cacheService,
+      urlRepository: this.urlRepository,
+    };
   }
 
   // Graceful shutdown
@@ -283,7 +312,7 @@ export class QueueManager {
     }
 
     this.isShuttingDown = true;
-    console.log('Shutting down QueueManager...');
+    logger.info('Shutting down QueueManager...');
 
     try {
       // Close all workers first
@@ -291,21 +320,21 @@ export class QueueManager {
         await worker.close();
       });
       await Promise.all(workerPromises);
-      console.log('All workers closed');
+      logger.info('All workers closed');
 
       // Close all queues
       const queuePromises = Array.from(this.queues.values()).map(async (queue) => {
         await queue.close();
       });
       await Promise.all(queuePromises);
-      console.log('All queues closed');
+      logger.info('All queues closed');
 
       this.queues.clear();
       this.workers.clear();
 
-      console.log('QueueManager shutdown completed');
+      logger.info('QueueManager shutdown completed');
     } catch (error) {
-      console.error('Error during QueueManager shutdown:', error);
+      logger.error('Error during QueueManager shutdown', error as Error);
       throw error;
     }
   }

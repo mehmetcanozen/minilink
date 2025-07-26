@@ -1,9 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
-import { InvalidUrlError, UrlNotFoundError, SlugGenerationError, ApiResponse } from '../types';
+import { 
+  InvalidUrlError, 
+  UrlNotFoundError, 
+  SlugGenerationError, 
+  RepositoryError,
+  DatabaseConnectionError,
+  DuplicateResourceError,
+  ResourceNotFoundError,
+  ApiResponse 
+} from '../types';
+import { logger } from './logger';
+
+// Helper function to create error responses with timestamp
+function createErrorResponse(code: string, message: string): ApiResponse<null> {
+  return {
+    success: false,
+    error: {
+      code,
+      message,
+      timestamp: new Date().toISOString(),
+    },
+  };
+}
 
 // Error handling middleware
 export function errorHandler(err: Error, req: Request, res: Response): void {
-  console.error('Error:', err);
+  // Use structured logging instead of console.error
+  logger.error('Unhandled error in request', err, {
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+  });
 
   // Handle custom errors
   if (err instanceof InvalidUrlError) {
@@ -12,6 +40,7 @@ export function errorHandler(err: Error, req: Request, res: Response): void {
       error: {
         code: 'INVALID_URL',
         message: err.message,
+        timestamp: new Date().toISOString(),
       },
     };
     res.status(400).json(response);
@@ -19,89 +48,98 @@ export function errorHandler(err: Error, req: Request, res: Response): void {
   }
 
   if (err instanceof UrlNotFoundError) {
-    const response: ApiResponse<null> = {
-      success: false,
-      error: {
-        code: 'URL_NOT_FOUND',
-        message: err.message,
-      },
-    };
-    res.status(404).json(response);
+    res.status(404).json(createErrorResponse('URL_NOT_FOUND', err.message));
     return;
   }
 
   if (err instanceof SlugGenerationError) {
-    const response: ApiResponse<null> = {
-      success: false,
-      error: {
-        code: 'SLUG_GENERATION_ERROR',
-        message: err.message,
-      },
-    };
-    res.status(500).json(response);
+    res.status(500).json(createErrorResponse('SLUG_GENERATION_ERROR', err.message));
     return;
   }
 
-  // Handle database errors
+  // Handle repository errors
+  if (err instanceof RepositoryError) {
+    res.status(500).json(createErrorResponse('REPOSITORY_ERROR', err.message));
+    return;
+  }
+
+  if (err instanceof DatabaseConnectionError) {
+    res.status(503).json(createErrorResponse('DATABASE_CONNECTION_ERROR', err.message));
+    return;
+  }
+
+  if (err instanceof DuplicateResourceError) {
+    res.status(409).json(createErrorResponse('DUPLICATE_ERROR', err.message));
+    return;
+  }
+
+  if (err instanceof ResourceNotFoundError) {
+    res.status(404).json(createErrorResponse('RESOURCE_NOT_FOUND', err.message));
+    return;
+  }
+
+  // Handle Prisma database errors with specific error codes
+  if (err.constructor.name === 'PrismaClientKnownRequestError') {
+    const prismaError = err as unknown as { code: string; message: string }; // Type assertion for Prisma error
+    
+    switch (prismaError.code) {
+      case 'P2002': { // Unique constraint violation
+        res.status(409).json(createErrorResponse('DUPLICATE_ERROR', 'Resource already exists (e.g., short code or original URL)'));
+        return;
+      }
+      
+      case 'P2025': { // Record not found
+        res.status(404).json(createErrorResponse('URL_NOT_FOUND', 'The requested resource was not found'));
+        return;
+      }
+      
+      case 'P2003': { // Foreign key constraint violation
+        res.status(400).json(createErrorResponse('RELATED_RESOURCE_ERROR', 'Related resource not found'));
+        return;
+      }
+      
+      default:
+        // Log unknown Prisma errors for debugging
+        logger.warn('Unhandled Prisma error', { code: prismaError.code, message: prismaError.message });
+        break;
+    }
+  }
+
+  // Handle database errors (fallback for non-Prisma errors)
   if (err.message.includes('duplicate key') || err.message.includes('already exists')) {
-    const response: ApiResponse<null> = {
-      success: false,
-      error: {
-        code: 'DUPLICATE_ERROR',
-        message: 'Resource already exists',
-      },
-    };
-    res.status(409).json(response);
+    res.status(409).json(createErrorResponse('DUPLICATE_ERROR', 'Resource already exists'));
     return;
   }
 
   // Handle unauthorized errors
   if (err.message.includes('Unauthorized')) {
-    const response: ApiResponse<null> = {
-      success: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Unauthorized access',
-      },
-    };
-    res.status(401).json(response);
+    res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Unauthorized access'));
     return;
   }
 
   // Handle rate limiting errors
   if (err.message.includes('Too many requests')) {
-    const response: ApiResponse<null> = {
-      success: false,
-      error: {
-        code: 'RATE_LIMITED',
-        message: 'Too many requests. Please try again later.',
-      },
-    };
-    res.status(429).json(response);
+    res.status(429).json(createErrorResponse('RATE_LIMITED', 'Too many requests. Please try again later.'));
     return;
   }
 
-  // Default server error
-  const response: ApiResponse<null> = {
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: 'Internal server error',
-    },
-  };
-  res.status(500).json(response);
+  // Default server error - Generic message for production
+  const isProduction = process.env.NODE_ENV === 'production';
+  const message = isProduction 
+    ? 'An unexpected internal server error occurred.' 
+    : err.message;
+  res.status(500).json(createErrorResponse('INTERNAL_ERROR', message));
 }
 
 // 404 handler for unmatched routes
 export function notFoundHandler(req: Request, res: Response): void {
-  const response: ApiResponse<null> = {
-    success: false,
-    error: {
-      code: 'NOT_FOUND',
-      message: `Route ${req.method} ${req.path} not found`,
-    },
-  };
-  res.status(404).json(response);
+  logger.info('Route not found', {
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+  });
+
+  res.status(404).json(createErrorResponse('NOT_FOUND', `Route ${req.method} ${req.path} not found`));
 }
 
 // Async handler wrapper to catch errors in async route handlers

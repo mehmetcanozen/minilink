@@ -10,6 +10,7 @@ export class Url implements UrlEntity {
   expiresAt?: Date;
   userId?: string;
 
+  // Constructor for rehydrating existing URL entities (e.g., from database or cache)
   constructor(data: UrlEntity) {
     this.id = data.id;
     this.originalUrl = data.originalUrl;
@@ -23,7 +24,8 @@ export class Url implements UrlEntity {
     this.validateUrl();
   }
 
-  // Factory method to create a new URL instance
+  // Factory method to create a new URL instance for persistence
+  // Use this for creating new URLs, not the constructor
   static create(originalUrl: string, shortSlug: string, userId?: string, expiresAt?: Date): Omit<UrlEntity, 'id' | 'createdAt' | 'updatedAt'> {
     // Validate URL before creating
     Url.validateOriginalUrl(originalUrl);
@@ -152,6 +154,7 @@ export class Url implements UrlEntity {
     }
 
     // Reserved slugs that shouldn't be used
+    // IMPORTANT: Update this list when adding new routes to prevent conflicts
     const reservedSlugs = ['api', 'admin', 'www', 'app', 'help', 'about', 'contact', 'terms', 'privacy'];
     if (reservedSlugs.includes(slug.toLowerCase())) {
       throw new InvalidUrlError(`Short slug '${slug}' is reserved and cannot be used`);

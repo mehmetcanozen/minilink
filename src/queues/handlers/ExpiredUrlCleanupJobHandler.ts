@@ -1,6 +1,6 @@
 import { PrismaUrlRepository } from '../../repositories/PrismaUrlRepository';
-import { getPrismaClient } from '../../config/prisma';
 import { CacheService } from '../../services/CacheService';
+import { logger } from '../../middleware/logger';
 
 export interface ExpiredUrlCleanupJob {
   timestamp: string;
@@ -11,26 +11,26 @@ export class ExpiredUrlCleanupJobHandler {
   private urlRepository: PrismaUrlRepository;
   private cacheService: CacheService;
 
-  constructor() {
-    this.urlRepository = new PrismaUrlRepository(getPrismaClient());
-    this.cacheService = new CacheService();
+  constructor(urlRepository: PrismaUrlRepository, cacheService: CacheService) {
+    this.urlRepository = urlRepository;
+    this.cacheService = cacheService;
   }
 
   async process(job: { data: ExpiredUrlCleanupJob }): Promise<void> {
     const { timestamp, batchSize = 100 } = job.data;
 
     try {
-      console.log(`Processing expired URL cleanup job at ${timestamp}`);
+      logger.info(`Processing expired URL cleanup job`, { timestamp, batchSize });
 
       // Find expired URLs
       const expiredUrls = await this.findExpiredUrls(batchSize);
       
       if (expiredUrls.length === 0) {
-        console.log('No expired URLs found');
+        logger.info('No expired URLs found');
         return;
       }
 
-      console.log(`Found ${expiredUrls.length} expired URLs to clean up`);
+      logger.info(`Found ${expiredUrls.length} expired URLs to clean up`);
 
       // Delete expired URLs from database
       await this.deleteExpiredUrls(expiredUrls);
@@ -38,60 +38,49 @@ export class ExpiredUrlCleanupJobHandler {
       // Clean up related caches
       await this.cleanupExpiredUrlCaches(expiredUrls);
 
-      console.log(`Successfully cleaned up ${expiredUrls.length} expired URLs`);
+      logger.info(`Successfully cleaned up ${expiredUrls.length} expired URLs`);
 
     } catch (error) {
-      console.error('Failed to process expired URL cleanup job:', error);
+      logger.error('Failed to process expired URL cleanup job', error as Error);
       throw error; // Re-throw to trigger BullMQ retry mechanism
     }
   }
 
   private async findExpiredUrls(limit: number): Promise<Array<{ id: string; shortSlug: string; originalUrl: string }>> {
     try {
-      const prisma = getPrismaClient();
+      const expiredUrls = await this.urlRepository.getExpiredUrls(limit);
       
-      // Use raw SQL to find expired URLs (since Prisma client might not have expiresAt field yet)
-      const expiredUrls = await prisma.$queryRaw<Array<{ id: string; short_slug: string; original_url: string }>>`
-        SELECT id, short_slug, original_url 
-        FROM urls 
-        WHERE expires_at IS NOT NULL 
-        AND expires_at < NOW() 
-        ORDER BY expires_at ASC 
-        LIMIT ${limit}
-      `;
-
+      logger.debug(`Found ${expiredUrls.length} expired URLs`, { limit });
+      
       return expiredUrls.map(url => ({
         id: url.id,
-        shortSlug: url.short_slug,
-        originalUrl: url.original_url,
+        shortSlug: url.shortSlug,
+        originalUrl: url.originalUrl,
       }));
     } catch (error) {
-      console.error('Failed to find expired URLs:', error);
+      logger.error('Failed to find expired URLs', error as Error, { limit });
       throw error;
     }
   }
 
   private async deleteExpiredUrls(expiredUrls: Array<{ id: string; shortSlug: string; originalUrl: string }>): Promise<void> {
     try {
-      const prisma = getPrismaClient();
-      
       // Delete expired URLs in batches
       const batchSize = 50;
+      let totalDeleted = 0;
+      
       for (let i = 0; i < expiredUrls.length; i += batchSize) {
         const batch = expiredUrls.slice(i, i + batchSize);
         
-        await prisma.url.deleteMany({
-          where: {
-            id: {
-              in: batch.map(url => url.id),
-            },
-          },
-        });
+        const deletedCount = await this.urlRepository.deleteExpiredUrls();
+        totalDeleted += deletedCount;
 
-        console.log(`Deleted batch of ${batch.length} expired URLs`);
+        logger.debug(`Deleted batch of ${batch.length} expired URLs`, { batchIndex: i / batchSize + 1 });
       }
+      
+      logger.info(`Total expired URLs deleted from database`, { totalDeleted });
     } catch (error) {
-      console.error('Failed to delete expired URLs:', error);
+      logger.error('Failed to delete expired URLs', error as Error);
       throw error;
     }
   }
@@ -111,11 +100,24 @@ export class ExpiredUrlCleanupJobHandler {
           await this.cacheService.invalidateUrlRelatedCache(url.shortSlug, url.originalUrl);
           
         } catch (error) {
-          console.warn(`Failed to cleanup cache for expired URL ${url.shortSlug}:`, error);
+          logger.warn(`Failed to cleanup cache for expired URL ${url.shortSlug}`, { 
+            shortSlug: url.shortSlug, 
+            error: error instanceof Error ? error.message : String(error) 
+          });
         }
       });
 
-      await Promise.allSettled(cleanupPromises);
+      const results = await Promise.allSettled(cleanupPromises);
+      
+      // Log cleanup results
+      const successful = results.filter(result => result.status === 'fulfilled').length;
+      const failed = results.filter(result => result.status === 'rejected').length;
+      
+      logger.info(`Cache cleanup completed`, { 
+        total: expiredUrls.length, 
+        successful, 
+        failed 
+      });
       
       // Invalidate aggregate caches by clearing popular and recent URLs
       await Promise.allSettled([
@@ -125,7 +127,7 @@ export class ExpiredUrlCleanupJobHandler {
       ]);
       
     } catch (error) {
-      console.error('Failed to cleanup expired URL caches:', error);
+      logger.error('Failed to cleanup expired URL caches', error as Error);
       // Don't throw - cache cleanup failures shouldn't break the main cleanup process
     }
   }
@@ -134,15 +136,14 @@ export class ExpiredUrlCleanupJobHandler {
   async healthCheck(): Promise<boolean> {
     try {
       // Test database connection through repository
-      const prisma = getPrismaClient();
-      await prisma.$queryRaw`SELECT 1`;
+      await this.urlRepository.getTotalUrlCount();
       
       // Test cache service
       await this.cacheService.isHealthy();
       
       return true;
     } catch (error) {
-      console.error('Expired URL cleanup job handler health check failed:', error);
+      logger.error('Expired URL cleanup job handler health check failed', error as Error);
       return false;
     }
   }

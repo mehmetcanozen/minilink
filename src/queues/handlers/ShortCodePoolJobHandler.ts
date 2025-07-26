@@ -1,5 +1,6 @@
 import { generateSlugs } from '../../utils/slugGenerator';
 import { getRedisClient } from '../../config/redis';
+import { logger } from '../../middleware/logger';
 
 export interface ShortCodePoolJob {
   count: number;
@@ -19,7 +20,7 @@ export class ShortCodePoolJobHandler {
     const { count } = job.data;
 
     try {
-      console.log(`Generating ${count} short codes for pool...`);
+      logger.info(`Generating ${count} short codes for pool`);
 
       // Generate new slugs
       const newSlugs = generateSlugs(count);
@@ -30,10 +31,11 @@ export class ShortCodePoolJobHandler {
       // Check if we need to generate more
       await this.ensurePoolSize();
       
-      console.log(`Generated ${newSlugs.length} short codes. Pool size: ${await this.getPoolSize()}`);
+      const poolSize = await this.getPoolSize();
+      logger.info(`Generated ${newSlugs.length} short codes`, { poolSize });
 
     } catch (error) {
-      console.error('Failed to process short code pool job:', error);
+      logger.error('Failed to process short code pool job', error as Error, { count });
       throw error;
     }
   }
@@ -51,8 +53,9 @@ export class ShortCodePoolJobHandler {
       const currentSize = await this.getPoolSize();
       await redis.set(`${this.POOL_KEY}:size`, currentSize + slugs.length);
       
+      logger.debug(`Added ${slugs.length} slugs to pool`, { newSize: currentSize + slugs.length });
     } catch (error) {
-      console.error('Failed to add slugs to pool:', error);
+      logger.error('Failed to add slugs to pool', error as Error, { slugCount: slugs.length });
       throw error;
     }
   }
@@ -63,7 +66,7 @@ export class ShortCodePoolJobHandler {
       const size = await redis.get(`${this.POOL_KEY}:size`);
       return size ? parseInt(size, 10) : 0;
     } catch (error) {
-      console.error('Failed to get pool size:', error);
+      logger.error('Failed to get pool size', error as Error);
       return 0;
     }
   }
@@ -74,7 +77,11 @@ export class ShortCodePoolJobHandler {
       
       if (currentSize < this.MIN_POOL_SIZE) {
         const needed = this.MIN_POOL_SIZE - currentSize;
-        console.log(`Pool size (${currentSize}) below minimum (${this.MIN_POOL_SIZE}). Generating ${needed} more codes...`);
+        logger.info(`Pool size below minimum, scheduling generation of ${needed} more codes`, { 
+          currentSize, 
+          minSize: this.MIN_POOL_SIZE, 
+          needed 
+        });
         
         // Schedule another job to generate more codes
         const { getQueueManager } = await import('../QueueManager');
@@ -88,7 +95,7 @@ export class ShortCodePoolJobHandler {
         );
       }
     } catch (error) {
-      console.error('Failed to ensure pool size:', error);
+      logger.error('Failed to ensure pool size', error as Error);
     }
   }
 
@@ -102,6 +109,7 @@ export class ShortCodePoolJobHandler {
       const availableKeys = keys.filter((key: string) => !key.endsWith(':size'));
       
       if (availableKeys.length === 0) {
+        logger.warn('No slugs available in pool');
         return null;
       }
       
@@ -116,12 +124,13 @@ export class ShortCodePoolJobHandler {
         const currentSize = await this.getPoolSize();
         await redis.set(`${this.POOL_KEY}:size`, Math.max(0, currentSize - 1));
         
+        logger.debug(`Retrieved slug from pool`, { slug, remainingSize: Math.max(0, currentSize - 1) });
         return slug;
       }
       
       return null;
     } catch (error) {
-      console.error('Failed to get slug from pool:', error);
+      logger.error('Failed to get slug from pool', error as Error);
       return null;
     }
   }
@@ -139,14 +148,17 @@ export class ShortCodePoolJobHandler {
       const keys = await redis.keys(`${this.POOL_KEY}:*`);
       const availableKeys = keys.filter((key: string) => !key.endsWith(':size'));
       
-      return {
+      const stats = {
         size,
         minSize: this.MIN_POOL_SIZE,
         maxSize: this.MAX_POOL_SIZE,
         keys: availableKeys.map((key: string) => key.replace(`${this.POOL_KEY}:`, '')),
       };
+      
+      logger.debug('Pool stats retrieved', stats);
+      return stats;
     } catch (error) {
-      console.error('Failed to get pool stats:', error);
+      logger.error('Failed to get pool stats', error as Error);
       return {
         size: 0,
         minSize: this.MIN_POOL_SIZE,
@@ -163,18 +175,19 @@ export class ShortCodePoolJobHandler {
       
       if (currentSize < this.MIN_POOL_SIZE) {
         const needed = this.MIN_POOL_SIZE - currentSize;
-        console.log(`Initializing short code pool with ${needed} codes...`);
+        logger.info(`Initializing short code pool with ${needed} codes`, { currentSize, needed });
         
         // Generate initial batch
         const initialSlugs = generateSlugs(needed);
         await this.addSlugsToPool(initialSlugs);
         
-        console.log(`Pool initialized with ${needed} codes. Total size: ${await this.getPoolSize()}`);
+        const finalSize = await this.getPoolSize();
+        logger.info(`Pool initialized successfully`, { finalSize });
       } else {
-        console.log(`Pool already has ${currentSize} codes. No initialization needed.`);
+        logger.info(`Pool already has sufficient codes`, { currentSize, minSize: this.MIN_POOL_SIZE });
       }
     } catch (error) {
-      console.error('Failed to initialize pool:', error);
+      logger.error('Failed to initialize pool', error as Error);
     }
   }
 } 

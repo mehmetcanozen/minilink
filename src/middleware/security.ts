@@ -1,23 +1,24 @@
 import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
+import { logger } from './logger';
 
 // Enhanced security middleware using Helmet
 export const enhancedSecurity = helmet({
-  // Content Security Policy
+  // Content Security Policy - Production hardened
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: [
         "'self'", 
-        "'unsafe-inline'", // Allow inline styles for EJS templates
         "https://cdn.jsdelivr.net", // Bootstrap CDN
         "https://cdnjs.cloudflare.com" // Font Awesome CDN
+        // Removed 'unsafe-inline' for production security
       ],
       scriptSrc: [
         "'self'", 
-        "'unsafe-inline'", // Allow inline scripts for EJS templates
         "https://cdn.jsdelivr.net", // QR Code library
         "https://cdnjs.cloudflare.com"
+        // Removed 'unsafe-inline' and 'unsafe-eval' for production security
       ],
       fontSrc: [
         "'self'",
@@ -29,15 +30,15 @@ export const enhancedSecurity = helmet({
         "data:", // Allow data: URIs for images (QR codes)
         "https:" // Allow HTTPS images
       ],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'"], // Removed ws: and wss: for production
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
     },
   },
 
-  // Cross-Origin Embedder Policy
-  crossOriginEmbedderPolicy: false, // Disable for broader compatibility
+  // Cross-Origin Embedder Policy - Enable for better security
+  crossOriginEmbedderPolicy: { policy: "require-corp" },
 
   // Cross-Origin Opener Policy
   crossOriginOpenerPolicy: { policy: "same-origin" },
@@ -82,24 +83,29 @@ export const enhancedSecurity = helmet({
 
 // Additional custom security middleware
 export function additionalSecurity(req: Request, res: Response, next: NextFunction): void {
-  // Remove Server header
-  res.removeHeader('Server');
-  
-  // Set additional custom headers
-  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
-  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
-  res.setHeader('Expect-CT', 'max-age=86400, enforce');
-  
-  // Set Cache-Control for static assets vs dynamic content
-  if (req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path.startsWith('/images/')) {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  } else {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-  }
+  try {
+    // Remove Server header
+    res.removeHeader('Server');
+    
+    // Set additional custom headers
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+    res.setHeader('Expect-CT', 'max-age=86400, enforce');
+    
+    // Set Cache-Control for static assets vs dynamic content
+    if (req.path.startsWith('/css/') || req.path.startsWith('/js/') || req.path.startsWith('/images/')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
 
-  next();
+    next();
+  } catch (error) {
+    logger.error('Error in additionalSecurity middleware', error as Error);
+    next();
+  }
 }
 
 // Development vs Production security configuration
@@ -121,6 +127,7 @@ export function getSecurityMiddleware() {
           },
         },
         hsts: false, // Disable HSTS in development
+        crossOriginEmbedderPolicy: false, // Disable for development compatibility
       }),
       additionalSecurity
     ];
@@ -129,15 +136,20 @@ export function getSecurityMiddleware() {
 
 // Security headers for API responses
 export function apiSecurity(req: Request, res: Response, next: NextFunction): void {
-  // JSON-specific security headers
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  
-  // Prevent caching of API responses
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
-  
-  next();
+  try {
+    // JSON-specific security headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    
+    // Prevent caching of API responses
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    next();
+  } catch (error) {
+    logger.error('Error in apiSecurity middleware', error as Error);
+    next();
+  }
 } 

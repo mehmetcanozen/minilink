@@ -1,17 +1,17 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load environment variables from .env.development
-dotenv.config({ path: path.resolve(process.cwd(), '.env.development') });
+// Load base .env file
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// Load environment-specific .env file with override
+if (process.env.NODE_ENV) {
+  dotenv.config({ path: path.resolve(process.cwd(), `.env.${process.env.NODE_ENV}`), override: true });
+}
 
 // Define configuration interfaces
 export interface DatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
-  username: string;
-  password: string;
-  provider: 'pg' | 'prisma'; // Choose database implementation
+  connectionString: string;
+  provider: 'pg' | 'prisma';
 }
 
 export interface RedisConfig {
@@ -31,22 +31,26 @@ export interface NanoidConfig {
   alphabet: string;
 }
 
+export interface QueueConfig {
+  maintenanceIntervalMs: number;
+  healthCheckIntervalMs: number;
+  expiredUrlCleanupIntervalMs: number;
+  initialCleanupDelayMs: number;
+}
+
 export interface AppConfig {
   nodeEnv: string;
   database: DatabaseConfig;
   redis: RedisConfig;
   server: ServerConfig;
   nanoid: NanoidConfig;
+  queue: QueueConfig;
 }
 
 // Database configuration
 export const databaseConfig: DatabaseConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  database: process.env.DB_NAME || 'minilink',
-  username: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  provider: (process.env.DB_PROVIDER as 'pg' | 'prisma') || 'prisma', // Default to Prisma
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:@localhost:5432/minilink',
+  provider: (process.env.DB_PROVIDER as 'pg' | 'prisma') || 'prisma',
 };
 
 // Redis configuration
@@ -63,10 +67,18 @@ export const serverConfig: ServerConfig = {
   baseUrl: process.env.BASE_URL || `http://localhost:${process.env.PORT || '3000'}`,
 };
 
-// Nanoid configuration
+// Nanoid configuration (use safer alphabet from README)
 export const nanoidConfig: NanoidConfig = {
   size: parseInt(process.env.NANOID_SIZE || '8', 10),
-  alphabet: process.env.NANOID_ALPHABET || '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+  alphabet: process.env.NANOID_ALPHABET || 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789',
+};
+
+// Queue configuration
+export const queueConfig: QueueConfig = {
+  maintenanceIntervalMs: parseInt(process.env.QUEUE_MAINTENANCE_INTERVAL_MS || '3600000', 10), // 1 hour
+  healthCheckIntervalMs: parseInt(process.env.QUEUE_HEALTH_CHECK_INTERVAL_MS || '300000', 10), // 5 minutes
+  expiredUrlCleanupIntervalMs: parseInt(process.env.EXPIRED_URL_CLEANUP_INTERVAL_MS || '21600000', 10), // 6 hours
+  initialCleanupDelayMs: parseInt(process.env.INITIAL_CLEANUP_DELAY_MS || '300000', 10), // 5 minutes
 };
 
 // Combined configuration
@@ -76,29 +88,17 @@ export const config: AppConfig = {
   redis: redisConfig,
   server: serverConfig,
   nanoid: nanoidConfig,
+  queue: queueConfig,
 };
 
 // Configuration validation
 export function validateConfig(): void {
-  const requiredEnvVars = [
-    'DB_HOST',
-    'DB_PORT', 
-    'DB_NAME',
-    'DB_USER',
-    'DB_PASSWORD'
-  ];
-
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+  // Require DATABASE_URL
+  if (!process.env.DATABASE_URL) {
+    throw new Error('Missing required environment variable: DATABASE_URL');
   }
 
   // Validate port numbers
-  if (isNaN(databaseConfig.port) || databaseConfig.port <= 0) {
-    throw new Error('DB_PORT must be a valid positive number');
-  }
-
   if (isNaN(redisConfig.port) || redisConfig.port <= 0) {
     throw new Error('REDIS_PORT must be a valid positive number');
   }
@@ -109,6 +109,23 @@ export function validateConfig(): void {
 
   if (isNaN(nanoidConfig.size) || nanoidConfig.size <= 0) {
     throw new Error('NANOID_SIZE must be a valid positive number');
+  }
+
+  // Validate queue configuration
+  if (isNaN(queueConfig.maintenanceIntervalMs) || queueConfig.maintenanceIntervalMs <= 0) {
+    throw new Error('QUEUE_MAINTENANCE_INTERVAL_MS must be a valid positive number');
+  }
+
+  if (isNaN(queueConfig.healthCheckIntervalMs) || queueConfig.healthCheckIntervalMs <= 0) {
+    throw new Error('QUEUE_HEALTH_CHECK_INTERVAL_MS must be a valid positive number');
+  }
+
+  if (isNaN(queueConfig.expiredUrlCleanupIntervalMs) || queueConfig.expiredUrlCleanupIntervalMs <= 0) {
+    throw new Error('EXPIRED_URL_CLEANUP_INTERVAL_MS must be a valid positive number');
+  }
+
+  if (isNaN(queueConfig.initialCleanupDelayMs) || queueConfig.initialCleanupDelayMs <= 0) {
+    throw new Error('INITIAL_CLEANUP_DELAY_MS must be a valid positive number');
   }
 
   // Validate database provider
