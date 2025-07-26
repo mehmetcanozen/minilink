@@ -1,6 +1,7 @@
 import { createClient } from 'redis';
+import { redisConfig } from './index';
+import { logger } from '../middleware/logger';
 
-// Use a more flexible type to avoid complex Redis generic issues
 type RedisClient = ReturnType<typeof createClient>;
 
 class RedisConnectionError extends Error {
@@ -10,94 +11,63 @@ class RedisConnectionError extends Error {
   }
 }
 
-// Redis client instance
-let redisClient: RedisClient | null = null;
+// Module-level singleton Redis client
+const client: RedisClient = createClient({
+  socket: {
+    host: redisConfig.host,
+    port: redisConfig.port,
+  },
+  password: redisConfig.password,
+  database: redisConfig.database,
+});
 
-// Redis configuration
-export const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379', 10),
-  password: process.env.REDIS_PASSWORD || undefined,
-  database: parseInt(process.env.REDIS_DB || '0', 10),
-};
+client.on('error', (err: Error) => {
+  logger.error('Redis Client Error', err);
+});
 
-// Create Redis client
-export function createRedisClient(): RedisClient {
-  const client = createClient({
-    socket: {
-      host: redisConfig.host,
-      port: redisConfig.port,
-    },
-    password: redisConfig.password,
-    database: redisConfig.database,
-  });
+client.on('connect', () => {
+  logger.info('Redis client connected');
+});
 
-  // Error handling
-  client.on('error', (err: Error) => {
-    console.error('Redis Client Error:', err);
-  });
+client.on('ready', () => {
+  logger.info('Redis client ready');
+});
 
-  client.on('connect', () => {
-    console.log('Redis client connected');
-  });
+client.on('end', () => {
+  logger.info('Redis client disconnected');
+});
 
-  client.on('ready', () => {
-    console.log('Redis client ready');
-  });
-
-  client.on('end', () => {
-    console.log('Redis client disconnected');
-  });
-
-  return client;
-}
-
-// Connect to Redis
 export async function connectRedis(): Promise<void> {
   try {
-    if (!redisClient) {
-      redisClient = createRedisClient();
-    }
-    
-    await redisClient.connect();
-    console.log('Redis connection established successfully');
+    await client.connect();
+    logger.info('Redis connection established successfully');
   } catch (error) {
-    console.error('Failed to connect to Redis:', error);
+    logger.error('Failed to connect to Redis', error as Error);
     throw new RedisConnectionError(`Failed to connect to Redis: ${error}`);
   }
 }
 
-// Disconnect from Redis
 export async function disconnectRedis(): Promise<void> {
   try {
-    if (redisClient) {
-      await redisClient.disconnect();
-      redisClient = null;
-      console.log('Redis connection closed successfully');
-    }
+    await client.disconnect();
+    logger.info('Redis connection closed successfully');
   } catch (error) {
-    console.error('Error closing Redis connection:', error);
+    logger.error('Error closing Redis connection', error as Error);
     throw new RedisConnectionError(`Failed to close Redis connection: ${error}`);
   }
 }
 
-// Get Redis client
 export function getRedisClient(): RedisClient {
-  if (!redisClient) {
-    throw new RedisConnectionError('Redis client not initialized. Call connectRedis() first.');
-  }
-  return redisClient;
+  return client;
 }
 
-// Test Redis connection
 export async function testRedisConnection(): Promise<boolean> {
   try {
-    const client = getRedisClient();
     await client.ping();
-    console.log('Redis connection test successful');
+    logger.info('Redis connection test successful');
     return true;
   } catch (error) {
-    console.error('Redis connection test failed:', error);
+    logger.error('Redis connection test failed', error as Error);
     return false;
   }
 }
@@ -106,8 +76,8 @@ export async function testRedisConnection(): Promise<boolean> {
 export class RedisCache {
   private client: RedisClient;
 
-  constructor(client: RedisClient) {
-    this.client = client;
+  constructor() {
+    this.client = getRedisClient();
   }
 
   // Basic key-value operations
@@ -119,7 +89,7 @@ export class RedisCache {
         await this.client.set(key, value);
       }
     } catch (error) {
-      console.error(`Redis SET error for key ${key}:`, error);
+      logger.error(`Redis SET error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -128,7 +98,7 @@ export class RedisCache {
     try {
       return await this.client.get(key);
     } catch (error) {
-      console.error(`Redis GET error for key ${key}:`, error);
+      logger.error(`Redis GET error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -137,7 +107,7 @@ export class RedisCache {
     try {
       return await this.client.del(key);
     } catch (error) {
-      console.error(`Redis DEL error for key ${key}:`, error);
+      logger.error(`Redis DEL error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -148,7 +118,7 @@ export class RedisCache {
       const jsonValue = JSON.stringify(value);
       await this.set(key, jsonValue, ttlSeconds);
     } catch (error) {
-      console.error(`Redis SET JSON error for key ${key}:`, error);
+      logger.error(`Redis SET JSON error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -158,7 +128,7 @@ export class RedisCache {
       const value = await this.get(key);
       return value ? JSON.parse(value) as T : null;
     } catch (error) {
-      console.error(`Redis GET JSON error for key ${key}:`, error);
+      logger.error(`Redis GET JSON error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -168,7 +138,7 @@ export class RedisCache {
     try {
       return await this.client.incr(key);
     } catch (error) {
-      console.error(`Redis INCR error for key ${key}:`, error);
+      logger.error(`Redis INCR error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -177,7 +147,7 @@ export class RedisCache {
     try {
       return await this.client.incrBy(key, increment);
     } catch (error) {
-      console.error(`Redis INCRBY error for key ${key}:`, error);
+      logger.error(`Redis INCRBY error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -186,9 +156,9 @@ export class RedisCache {
   async exists(key: string): Promise<boolean> {
     try {
       const result = await this.client.exists(key);
-      return result === 1;
+      return Boolean(result);
     } catch (error) {
-      console.error(`Redis EXISTS error for key ${key}:`, error);
+      logger.error(`Redis EXISTS error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -197,9 +167,9 @@ export class RedisCache {
   async expire(key: string, seconds: number): Promise<boolean> {
     try {
       const result = await this.client.expire(key, seconds);
-      return result === 1;
+      return Boolean(result);
     } catch (error) {
-      console.error(`Redis EXPIRE error for key ${key}:`, error);
+      logger.error(`Redis EXPIRE error for key ${key}`, error as Error);
       throw error;
     }
   }
@@ -214,7 +184,7 @@ export class RedisCache {
       await this.del(testKey);
       return result === 'test';
     } catch (error) {
-      console.error('Redis health check failed:', error);
+      logger.error('Redis health check failed', error as Error);
       return false;
     }
   }
@@ -222,7 +192,7 @@ export class RedisCache {
 
 // Create cache instance
 export function createRedisCache(): RedisCache {
-  return new RedisCache(getRedisClient());
+  return new RedisCache();
 }
 
-export default redisClient; 
+export default client; 
