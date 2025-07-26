@@ -2,9 +2,10 @@ import express from 'express';
 import path from 'path';
 import { config, serverConfig, validateConfig } from './config';
 import { connectPrisma, disconnectPrisma, testPrismaConnection } from './config/prisma';
+import { connectDatabase, disconnectDatabase, testDatabaseConnection } from './config/database';
 import { connectRedis, disconnectRedis, testRedisConnection } from './config/redis';
 import { initializeQueues, shutdownQueues, QueueManager } from './queues/QueueManager';
-import { requestLogger, corsHeaders, requestSizeLimit, jsonParser } from './middleware/logger';
+import { requestLogger, corsHeaders, requestSizeLimit, jsonParser, logger } from './middleware/logger';
 import { getSecurityMiddleware, apiSecurity } from './middleware/security';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import routes from './routes';
@@ -52,43 +53,47 @@ app.use(errorHandler);
 
 // Global error handlers
 process.on('uncaughtException', (error: Error) => {
-  console.error('Uncaught Exception:', error);
+  logger.error('Uncaught Exception', error);
   gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled Rejection', new Error(String(reason)), { promise: promise.toString() });
   gracefulShutdown('UNHANDLED_REJECTION');
 });
 
 // Graceful shutdown handler
 async function gracefulShutdown(signal: string): Promise<void> {
-  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  logger.info(`Starting graceful shutdown`, { signal });
   
   try {
     // Stop accepting new connections
     if (server) {
       server.close(() => {
-        console.log('HTTP server closed');
+        logger.info('HTTP server closed');
       });
     }
 
     // Shutdown queues first (finish processing current jobs)
-    console.log('Shutting down queues...');
+    logger.info('Shutting down queues...');
     await shutdownQueues();
 
     // Disconnect from Redis
-    console.log('Disconnecting from Redis...');
+    logger.info('Disconnecting from Redis...');
     await disconnectRedis();
 
-    // Disconnect from Prisma
-    console.log('Disconnecting from Prisma...');
-    await disconnectPrisma();
+    // Disconnect from database based on provider
+    logger.info('Disconnecting from database...');
+    if (config.database.provider === 'prisma') {
+      await disconnectPrisma();
+    } else {
+      await disconnectDatabase();
+    }
 
-    console.log('Graceful shutdown completed');
+    logger.info('Graceful shutdown completed');
     process.exit(0);
   } catch (error) {
-    console.error('Error during graceful shutdown:', error);
+    logger.error('Error during graceful shutdown', error as Error);
     process.exit(1);
   }
 }
@@ -103,22 +108,29 @@ let server: ReturnType<typeof app.listen> | null = null;
 // Start server
 async function startServer(): Promise<void> {
   try {
-    console.log('Starting MiniLink URL Shortener...');
+    logger.info('Starting MiniLink URL Shortener...');
 
     // Validate configuration
     validateConfig();
 
-    // Connect to database via Prisma
-    console.log('Connecting to database via Prisma...');
-    await connectPrisma();
-    
-    const prismaHealthy = await testPrismaConnection();
-    if (!prismaHealthy) {
-      throw new Error('Prisma connection test failed');
+    // Connect to database based on provider
+    logger.info(`Connecting to database via ${config.database.provider}...`);
+    if (config.database.provider === 'prisma') {
+      await connectPrisma();
+      const prismaHealthy = await testPrismaConnection();
+      if (!prismaHealthy) {
+        throw new Error('Prisma connection test failed');
+      }
+    } else {
+      await connectDatabase();
+      const dbHealthy = await testDatabaseConnection();
+      if (!dbHealthy) {
+        throw new Error('Database connection test failed');
+      }
     }
 
     // Connect to Redis
-    console.log('Connecting to Redis...');
+    logger.info('Connecting to Redis...');
     await connectRedis();
     
     // Test Redis connection
@@ -128,28 +140,38 @@ async function startServer(): Promise<void> {
     }
 
     // Initialize job queues
-    console.log('Initializing job queues...');
+    logger.info('Initializing job queues...');
     const queueManager = await initializeQueues();
 
     // Set up queue workers
     await setupQueueWorkers(queueManager);
 
+    // Warm up cache with popular URLs
+    await warmUpCache();
+
     // Start HTTP server
     server = app.listen(serverConfig.port, () => {
+      logger.info('🚀 MiniLink URL Shortener started successfully!', {
+        port: serverConfig.port,
+        database: `${config.database.provider} (${config.database.connectionString.split('@')[1]?.split('/')[0] || 'connection'})`,
+        redis: `${config.redis.host}:${config.redis.port}`,
+        environment: config.nodeEnv
+      });
+      
       console.log(`\n🚀 MiniLink URL Shortener started successfully!`);
       console.log(`📍 Server running on http://localhost:${serverConfig.port}`);
-      console.log(`🗄️  Database: Prisma ORM (${config.database.host}:${config.database.port}/${config.database.database})`);
+      console.log(`🗄️  Database: ${config.database.provider.toUpperCase()} (${config.database.connectionString.split('@')[1]?.split('/')[0] || 'connection'})`);
       console.log(`🔴 Redis: Connected and ready`);
       console.log(`⚡ Job queues: Active and processing`);
       console.log(`🛡️  Security: Enhanced with Helmet`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📊 Environment: ${config.nodeEnv}`);
       console.log(`\n📚 API Documentation available at: http://localhost:${serverConfig.port}/api`);
       console.log(`🎨 Web Interface available at: http://localhost:${serverConfig.port}`);
       console.log('\n✅ Ready to shorten URLs!\n');
     });
 
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', error as Error);
     process.exit(1);
   }
 }
@@ -160,10 +182,17 @@ async function setupQueueWorkers(queueManager: QueueManager): Promise<void> {
     // Import job handlers dynamically to avoid circular dependencies
     const { ClickProcessingJobHandler } = await import('./queues/handlers/ClickProcessingJobHandler');
     const { ExpiredUrlCleanupJobHandler } = await import('./queues/handlers/ExpiredUrlCleanupJobHandler');
+    const { ShortCodePoolJobHandler } = await import('./queues/handlers/ShortCodePoolJobHandler');
+    const { CacheSyncJobHandler } = await import('./queues/handlers/CacheSyncJobHandler');
 
-    // Create job handlers
-    const clickHandler = new ClickProcessingJobHandler();
-    const expiredUrlHandler = new ExpiredUrlCleanupJobHandler();
+    // Get dependencies from queue manager
+    const { cacheService, urlRepository } = queueManager.getDependencies();
+
+    // Create job handlers with dependency injection
+    const clickHandler = new ClickProcessingJobHandler(cacheService, urlRepository);
+    const expiredUrlHandler = new ExpiredUrlCleanupJobHandler(urlRepository, cacheService);
+    const shortCodePoolHandler = new ShortCodePoolJobHandler();
+    const cacheSyncHandler = new CacheSyncJobHandler(cacheService, urlRepository);
 
     // Set up click processing worker
     queueManager.createWorker(
@@ -182,9 +211,6 @@ async function setupQueueWorkers(queueManager: QueueManager): Promise<void> {
     );
 
     // Set up short code pool worker
-    const { ShortCodePoolJobHandler } = await import('./queues/handlers/ShortCodePoolJobHandler');
-    const shortCodePoolHandler = new ShortCodePoolJobHandler();
-    
     queueManager.createWorker(
       'short-code-pool',
       async (job: { data: { count: number } }) => {
@@ -192,13 +218,7 @@ async function setupQueueWorkers(queueManager: QueueManager): Promise<void> {
       }
     );
 
-    // Initialize the short code pool
-    await shortCodePoolHandler.initializePool();
-
     // Set up cache sync worker
-    const { CacheSyncJobHandler } = await import('./queues/handlers/CacheSyncJobHandler');
-    const cacheSyncHandler = new CacheSyncJobHandler();
-    
     queueManager.createWorker(
       'cache-sync',
       async (job: { data: { slug: string; operation: 'sync' | 'invalidate'; data?: Record<string, unknown> } }) => {
@@ -206,53 +226,57 @@ async function setupQueueWorkers(queueManager: QueueManager): Promise<void> {
       }
     );
 
-    console.log('Queue workers set up successfully');
+    // Initialize the short code pool
+    await shortCodePoolHandler.initializePool();
+
+    logger.info('Queue workers set up successfully');
 
     // Start periodic queue maintenance and expired URL cleanup
     startQueueMaintenance(queueManager);
     startExpiredUrlCleanup(queueManager);
 
   } catch (error) {
-    console.error('Failed to setup queue workers:', error);
+    logger.error('Failed to setup queue workers', error as Error);
     throw error;
   }
 }
 
 // Periodic queue maintenance
 function startQueueMaintenance(queueManager: QueueManager): void {
-  // Clean old jobs every hour
+  // Clean old jobs based on configurable interval
   setInterval(async () => {
     try {
-      console.log('Running queue maintenance...');
+      logger.info('Running queue maintenance...');
       await queueManager.cleanQueue('click-processing');
       await queueManager.cleanQueue('short-code-pool');
       await queueManager.cleanQueue('cache-sync');
       await queueManager.cleanQueue('expired-url-cleanup');
-      console.log('Queue maintenance completed');
+      await queueManager.cleanQueue('cache-warm-up');
+      logger.info('Queue maintenance completed');
     } catch (error) {
-      console.error('Queue maintenance failed:', error);
+      logger.error('Queue maintenance failed', error as Error);
     }
-  }, 60 * 60 * 1000); // 1 hour
+  }, config.queue.maintenanceIntervalMs);
 
-  // Queue health check every 5 minutes
+  // Queue health check based on configurable interval
   setInterval(async () => {
     try {
       const healthy = await queueManager.isHealthy();
       if (!healthy) {
-        console.warn('Queue health check failed');
+        logger.warn('Queue health check failed');
       }
     } catch (error) {
-      console.error('Queue health check error:', error);
+      logger.error('Queue health check error', error as Error);
     }
-  }, 5 * 60 * 1000); // 5 minutes
+  }, config.queue.healthCheckIntervalMs);
 }
 
 // Periodic expired URL cleanup
 function startExpiredUrlCleanup(queueManager: QueueManager): void {
-  // Run expired URL cleanup every 6 hours
+  // Run expired URL cleanup based on configurable interval
   setInterval(async () => {
     try {
-      console.log('Scheduling expired URL cleanup job...');
+      logger.info('Scheduling expired URL cleanup job...');
       
       await queueManager.addJob(
         'expired-url-cleanup',
@@ -268,16 +292,16 @@ function startExpiredUrlCleanup(queueManager: QueueManager): void {
         }
       );
       
-      console.log('Expired URL cleanup job scheduled');
+      logger.info('Expired URL cleanup job scheduled');
     } catch (error) {
-      console.error('Failed to schedule expired URL cleanup job:', error);
+      logger.error('Failed to schedule expired URL cleanup job', error as Error);
     }
-  }, 6 * 60 * 60 * 1000); // 6 hours
+  }, config.queue.expiredUrlCleanupIntervalMs);
 
-  // Also run cleanup on startup (after 5 minutes to let system stabilize)
+  // Also run cleanup on startup (after configurable delay to let system stabilize)
   setTimeout(async () => {
     try {
-      console.log('Running initial expired URL cleanup...');
+      logger.info('Running initial expired URL cleanup...');
       
       await queueManager.addJob(
         'expired-url-cleanup',
@@ -293,11 +317,37 @@ function startExpiredUrlCleanup(queueManager: QueueManager): void {
         }
       );
       
-      console.log('Initial expired URL cleanup job scheduled');
+      logger.info('Initial expired URL cleanup job scheduled');
     } catch (error) {
-      console.error('Failed to schedule initial expired URL cleanup job:', error);
+      logger.error('Failed to schedule initial expired URL cleanup job', error as Error);
     }
-  }, 5 * 60 * 1000); // 5 minutes
+  }, config.queue.initialCleanupDelayMs);
+}
+
+// Warm up cache with popular URLs
+async function warmUpCache(): Promise<void> {
+  try {
+    const queueManager = await import('./queues/QueueManager').then(m => m.getQueueManager());
+    
+    // Add a job to warm up the cache
+    await queueManager.addJob(
+      'cache-warm-up',
+      'warm-up-cache',
+      {
+        timestamp: new Date().toISOString(),
+        batchSize: 100, // Warm up 100 popular URLs
+      },
+      {
+        priority: 1, // High priority for startup
+        removeOnComplete: 1,
+        removeOnFail: 1,
+      }
+    );
+    
+    logger.info('Cache warm-up job scheduled');
+  } catch (error) {
+    logger.error('Failed to schedule cache warm-up job', error as Error);
+  }
 }
 
 // Start the server

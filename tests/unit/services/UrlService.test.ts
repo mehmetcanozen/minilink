@@ -1,15 +1,18 @@
 import { UrlService } from '../../../src/services/UrlService';
 import { UrlRepository } from '../../../src/repositories/UrlRepository';
+import { CacheService } from '../../../src/services/CacheService';
 import { 
   InvalidUrlError,
   UrlEntity,
   CreateUrlDto,
-  CreateUrlResponseDto
+  CreateUrlResponseDto,
+  UrlStatsDto
 } from '../../../src/types';
 import { mockUrls } from '../../fixtures/urls';
 
 // Mock the dependencies
 jest.mock('../../../src/repositories/UrlRepository');
+jest.mock('../../../src/services/CacheService');
 
 describe('UrlService', () => {
   let urlService: UrlService;
@@ -34,8 +37,11 @@ describe('UrlService', () => {
     mockRepository.getPopularUrls = jest.fn();
     mockRepository.getRecentUrls = jest.fn();
     
+    // Create mock cache service
+    const mockCacheService = new CacheService({} as any) as jest.Mocked<CacheService>;
+    
     // Create service instance
-    urlService = new UrlService(mockRepository);
+    urlService = new UrlService(mockRepository, mockCacheService);
   });
 
   describe('shortenUrl', () => {
@@ -102,17 +108,18 @@ describe('UrlService', () => {
       const result = await urlService.getUrlStats(slug);
 
       expect(mockRepository.findBySlug).toHaveBeenCalledWith(slug);
-      expect(result).toEqual(mockUrl);
+      expect(result).toHaveProperty('shortUrl');
+      expect(result).toHaveProperty('isExpired');
+      expect(result).toHaveProperty('daysSinceCreation');
     });
 
-    it('should return null if URL does not exist', async () => {
+    it('should throw error if URL does not exist', async () => {
       const slug = 'nonexistent';
       
       mockRepository.findBySlug.mockResolvedValue(null);
 
-      const result = await urlService.getUrlStats(slug);
-
-      expect(result).toBeNull();
+      await expect(urlService.getUrlStats(slug))
+        .rejects.toThrow('URL with slug');
     });
   });
 

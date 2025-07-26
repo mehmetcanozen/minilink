@@ -14,14 +14,17 @@ A modern, full-stack URL shortening service built with Node.js, Express.js, Type
 - 🔄 **Auto Cleanup** - Automatic removal of expired URLs
 
 ### Advanced Features
-- 🏗️ **Hexagonal Architecture** - Clean, maintainable codebase
-- 🛡️ **Security First** - Input validation, rate limiting, SQL injection protection
+- 🏗️ **Hexagonal Architecture** - Clean, maintainable codebase with dependency injection
+- 🛡️ **Security First** - Input validation with Zod, rate limiting, SQL injection protection
 - 🔍 **Analytics Dashboard** - System-wide statistics and insights
 - 📋 **Copy to Clipboard** - One-click URL copying
-- 🎯 **Error Handling** - Comprehensive error management and user feedback
+- 🎯 **Error Handling** - Comprehensive error management with structured logging
 - 🏥 **Health Monitoring** - Built-in health checks and graceful shutdown
 - 🚀 **Performance Optimized** - Redis caching and BullMQ job queues
 - 🔧 **Short Code Pooling** - Pre-generated slugs for faster creation
+- 🔐 **Authentication Ready** - Framework for future JWT/OAuth integration
+- 📝 **Structured Logging** - Comprehensive logging with context and levels
+- 🎨 **Modern UI/UX** - Glassmorphism effects, smooth animations, dark theme
 
 ## 🛠️ Technology Stack
 
@@ -29,11 +32,13 @@ A modern, full-stack URL shortening service built with Node.js, Express.js, Type
 - **Node.js** with **Express.js** - Fast, scalable server
 - **TypeScript** - Type-safe JavaScript with enhanced developer experience
 - **PostgreSQL** - Robust relational database with ACID compliance
-- **Prisma** - Modern ORM with type safety
+- **Prisma** - Modern ORM with type safety and migrations
 - **Redis** - High-performance caching and real-time data
 - **BullMQ** - Reliable job queue system for scalability
 - **NanoID** - Cryptographically secure unique ID generation
 - **Helmet** - Security headers and protection
+- **Zod** - TypeScript-first schema validation
+- **Express Rate Limit** - Advanced rate limiting with multiple tiers
 
 ### Frontend
 - **EJS** - Server-side templating with dynamic content
@@ -42,18 +47,19 @@ A modern, full-stack URL shortening service built with Node.js, Express.js, Type
 - **Vanilla JavaScript** - Progressive enhancement and interactivity
 
 ### Architecture
-- **Hexagonal/Clean Architecture** - Separation of concerns
-- **Repository Pattern** - Database abstraction layer
+- **Hexagonal/Clean Architecture** - Separation of concerns with dependency injection
+- **Repository Pattern** - Database abstraction layer with multiple implementations
 - **Dependency Injection** - Loose coupling and testability
 - **Domain-Driven Design** - Rich domain models with business logic
-- **Queue Pattern** - Asynchronous job processing
-- **Cache Pattern** - Multi-layer caching strategy
+- **Queue Pattern** - Asynchronous job processing with BullMQ
+- **Cache Pattern** - Multi-layer caching strategy with Redis
+- **Middleware Pattern** - Request processing pipeline with security
 
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** (v16 or higher) - [Download here](https://nodejs.org/)
+- **Node.js** (v20 or higher) - [Download here](https://nodejs.org/)
 - **npm** (comes with Node.js)
 - **PostgreSQL** (v12 or higher) - [Download here](https://postgresql.org/)
 - **Redis** (v6 or higher) - [Download here](https://redis.io/)
@@ -96,8 +102,14 @@ NODE_ENV=development
 NANOID_SIZE=7
 NANOID_ALPHABET=ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789
 
-# Database Provider
+# Database Provider (prisma or pg)
 DB_PROVIDER=prisma
+
+# Queue Configuration
+QUEUE_MAINTENANCE_INTERVAL_MS=300000
+QUEUE_HEALTH_CHECK_INTERVAL_MS=60000
+EXPIRED_URL_CLEANUP_INTERVAL_MS=3600000
+INITIAL_CLEANUP_DELAY_MS=60000
 ```
 
 ### 4. Database Setup
@@ -152,7 +164,7 @@ npm start
 ### 8. Access the Application
 
 - **Web Interface**: http://localhost:3000
-- **Health Check**: http://localhost:3000/health
+- **Health Check**: http://localhost:3000/api/health
 - **API Endpoints**: http://localhost:3000/api/*
 - **Queue Status**: http://localhost:3000/api/queues/status
 - **Pool Status**: http://localhost:3000/api/pool/status
@@ -232,17 +244,36 @@ minilink/
 │   ├── config/          # Configuration and external services setup
 │   │   ├── database.ts  # PostgreSQL configuration
 │   │   ├── redis.ts     # Redis configuration and cache service
-│   │   └── prisma.ts    # Prisma ORM setup
+│   │   ├── prisma.ts    # Prisma ORM setup
+│   │   └── index.ts     # Centralized configuration management
 │   ├── controllers/     # Request handlers (API & Views)
-│   ├── middleware/      # Express middleware (logging, errors, security)
+│   │   ├── UrlController.ts    # API endpoints
+│   │   ├── ViewController.ts   # Page rendering
+│   │   └── HealthController.ts # Health monitoring
+│   ├── middleware/      # Express middleware
+│   │   ├── logger.ts    # Structured logging and request processing
+│   │   ├── errorHandler.ts # Global error handling
+│   │   ├── security.ts  # Security headers and protection
+│   │   ├── auth.ts      # Authentication framework (placeholder)
+│   │   └── rateLimiting.ts # Advanced rate limiting
 │   ├── models/          # Domain models with business logic
-│   ├── repositories/    # Data access layer (Prisma-based)
+│   ├── repositories/    # Data access layer
+│   │   ├── PrismaUrlRepository.ts # Prisma-based implementation
+│   │   └── UrlRepository.ts       # Raw PostgreSQL implementation
 │   ├── routes/          # Route definitions and setup
+│   │   ├── api.ts       # API routes with authentication
+│   │   ├── web.ts       # Public web routes
+│   │   └── index.ts     # Route orchestration
 │   ├── services/        # Business logic layer
+│   │   ├── UrlService.ts    # Core business logic
+│   │   └── CacheService.ts  # Redis caching operations
 │   ├── types/           # TypeScript type definitions
 │   ├── utils/           # Utility functions
 │   ├── views/           # EJS templates
 │   ├── queues/          # BullMQ job queues and handlers
+│   │   ├── QueueManager.ts
+│   │   └── handlers/    # Job processing handlers
+│   ├── schemas/         # Zod validation schemas
 │   └── index.ts         # Application entry point
 ├── public/              # Static assets (CSS, JS, images)
 ├── prisma/              # Prisma schema and migrations
@@ -345,19 +376,21 @@ The application uses Prisma ORM with the following schema:
 
 ```prisma
 model Url {
-  id          String   @id @default(cuid())
-  originalUrl String
-  shortSlug   String   @unique
-  clickCount  Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  expiresAt   DateTime?
-  userId      String?
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  originalUrl String    @map("original_url") @db.Text
+  shortSlug   String    @unique @map("short_slug") @db.VarChar(20)
+  clickCount  Int       @default(0) @map("click_count")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
+  userId      String?   @map("user_id") @db.Uuid
 
-  @@index([shortSlug])
-  @@index([originalUrl])
-  @@index([createdAt(sort: Desc)])
-  @@index([expiresAt])
+  @@index([shortSlug], name: "idx_urls_short_slug")
+  @@index([originalUrl], name: "idx_urls_original_url")
+  @@index([createdAt], name: "idx_urls_created_at")
+  @@index([expiresAt], name: "idx_urls_expires_at")
+  @@index([userId], name: "idx_urls_user_id")
+  @@map("urls")
 }
 ```
 
@@ -377,12 +410,17 @@ model Url {
 | `NANOID_SIZE` | Short URL length | `7` |
 | `NANOID_ALPHABET` | Characters for URL generation | Custom safe alphabet |
 | `DB_PROVIDER` | Database provider | `prisma` |
+| `QUEUE_MAINTENANCE_INTERVAL_MS` | Queue maintenance interval | `300000` |
+| `QUEUE_HEALTH_CHECK_INTERVAL_MS` | Health check interval | `60000` |
+| `EXPIRED_URL_CLEANUP_INTERVAL_MS` | Cleanup interval | `3600000` |
 
 ### Rate Limiting
 
 - **URL Shortening**: 10 requests per minute
 - **General API**: 100 requests per minute
+- **Admin Operations**: 5 requests per minute
 - **Redirects**: No limit (performance optimized)
+- **Health Checks**: 30 requests per minute
 
 ### Redis Configuration
 
@@ -397,16 +435,19 @@ model Url {
 - **Short Code Pool**: Pre-generated slug management
 - **Cache Sync**: Database-cache synchronization
 - **Expired URL Cleanup**: Automatic cleanup of expired URLs
+- **Cache Warm-up**: Pre-loading popular URLs into cache
 
 ## 🛡️ Security Features
 
-- **Input Validation**: Comprehensive URL and slug validation
+- **Input Validation**: Comprehensive URL and slug validation with Zod
 - **SQL Injection Prevention**: Parameterized queries via Prisma
-- **Rate Limiting**: Protection against abuse
+- **Rate Limiting**: Multi-tier protection against abuse
 - **Security Headers**: XSS, CSRF, and other protections via Helmet
 - **CORS Configuration**: Proper cross-origin handling
 - **Error Handling**: Secure error responses without sensitive data
 - **Redis Security**: Configurable authentication and network security
+- **Authentication Framework**: Ready for JWT/OAuth integration
+- **SSTI Protection**: Server-side template injection prevention
 
 ## 📈 Performance Features
 
@@ -417,6 +458,7 @@ model Url {
 - **Graceful Shutdown**: Proper resource cleanup
 - **Job Queues**: Asynchronous processing for better performance
 - **Short Code Pooling**: Pre-generated slugs for faster creation
+- **Bulk Operations**: Optimized database operations for multiple URLs
 
 ## 🚀 Deployment
 
@@ -437,7 +479,7 @@ model Url {
 
 ```dockerfile
 # Example Dockerfile (not included yet)
-FROM node:16-alpine
+FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --only=production
@@ -542,12 +584,12 @@ npm run dev
 
 ### Performance Monitoring
 
-- **Health Checks**: `/health` endpoint
+- **Health Checks**: `/api/health` endpoint
 - **Queue Status**: `/api/queues/status`
 - **Pool Status**: `/api/pool/status`
 - **System Stats**: `/api/stats`
 
 ---
 
-**Built with ❤️ using modern web technologies, clean architecture principles, and advanced features including Redis caching, job queues, and URL expiration.**
+**Built with ❤️ using modern web technologies, clean architecture principles, and advanced features including Redis caching, job queues, URL expiration, structured logging, Zod validation, and comprehensive error handling.**
 
