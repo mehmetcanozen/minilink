@@ -3,68 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - MiniLink</title>
+    <meta name="description" content="<%= typeof description !== 'undefined' ? description : 'Shorten URLs instantly with MiniLink. Create short, memorable links with analytics and expiration features.' %>">
+    <meta name="keywords" content="URL shortener, link shortener, short URLs, analytics, QR codes">
+    <meta name="author" content="MiniLink">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="<%= typeof title !== 'undefined' ? title : 'MiniLink - URL Shortener' %>">
+    <meta property="og:description" content="<%= typeof description !== 'undefined' ? description : 'Create short, memorable links instantly with analytics and expiration features.' %>">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<%= typeof baseUrl !== 'undefined' ? baseUrl : 'http://localhost:3000' %>">
+    <meta property="og:image" content="<%= typeof baseUrl !== 'undefined' ? baseUrl : 'http://localhost:3000' %>/images/og-image.png">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<%= typeof title !== 'undefined' ? title : 'MiniLink - URL Shortener' %>">
+    <meta name="twitter:description" content="<%= typeof description !== 'undefined' ? description : 'Create short, memorable links instantly with analytics and expiration features.' %>">
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     
-    <!-- Google Fonts -->
+    <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://api.qrserver.com">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/css/style.css">
     
-    <!-- Meta Tags -->
-    <meta name="description" content="Fast, reliable, and secure URL shortening service">
-    <meta name="keywords" content="url shortener, link shortener, short url, tiny url">
-    <meta name="author" content="MiniLink">
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="<%= title %> - MiniLink">
-    <meta property="og:description" content="Fast, reliable, and secure URL shortening service">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="<%= typeof baseUrl !== 'undefined' ? baseUrl : 'http://localhost:3000' %>">
+    <title><%= typeof title !== 'undefined' ? title : 'MiniLink - URL Shortener' %></title>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
+    <!-- Navigation -->
+    <nav class="navbar">
         <div class="container">
-            <nav class="navbar">
-                <a href="/" class="logo">
-                    <div class="logo-icon">
-                        <i class="fas fa-link"></i>
-                    </div>
-                    MiniLink
+            <a href="/" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-link"></i>
+                </div>
+                <span>MiniLink</span>
+            </a>
+            
+            <div class="nav-links">
+                <a href="/" class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'home' ? 'active' : '' %>">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
                 </a>
-                
-                <ul class="nav-links">
-                    <li>
-                        <a href="/" class="nav-link <%= currentPage === 'home' ? 'active' : '' %>">
-                            <i class="fas fa-home"></i>
-                            Home
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/dashboard" class="nav-link <%= currentPage === 'stats' ? 'active' : '' %>">
-                            <i class="fas fa-chart-bar"></i>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/api" class="nav-link">
-                            <i class="fas fa-code"></i>
-                            API
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+                <a href="/dashboard" class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'dashboard' ? 'active' : '' %>">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/api" class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'api' ? 'active' : '' %>">
+                    <i class="fas fa-code"></i>
+                    <span>API</span>
+                </a>
+            </div>
         </div>
-    </header>
+    </nav>
 
     <!-- Main Content -->
     <main>
@@ -75,37 +81,66 @@
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <div>
+                <div class="footer-brand">
                     <div class="logo">
                         <div class="logo-icon">
                             <i class="fas fa-link"></i>
                         </div>
-                        MiniLink
+                        <span>MiniLink</span>
                     </div>
-                    <p style="margin-top: 0.5rem; color: var(--gray-400);">
-                        Fast, reliable, and secure URL shortening service
-                    </p>
+                    <p>Professional URL shortening with advanced analytics and security features.</p>
                 </div>
                 
                 <div class="footer-links">
-                    <a href="/health" class="footer-link">
-                        <i class="fas fa-heart-pulse"></i>
-                        Health
-                    </a>
-                    <a href="/api" class="footer-link">
-                        <i class="fas fa-info-circle"></i>
-                        API
-                    </a>
+                    <div class="footer-section">
+                        <h4>Product</h4>
+                        <a href="/" class="footer-link">URL Shortener</a>
+                        <a href="/dashboard" class="footer-link">Analytics</a>
+                        <a href="/api" class="footer-link">API</a>
+                    </div>
+                    
+                    <div class="footer-section">
+                        <h4>Resources</h4>
+                        <a href="/docs" class="footer-link">Documentation</a>
+                        <a href="/health" class="footer-link">System Status</a>
+                        <a href="/privacy" class="footer-link">Privacy Policy</a>
+                    </div>
+                    
+                    <div class="footer-section">
+                        <h4>Support</h4>
+                        <a href="/contact" class="footer-link">Contact Us</a>
+                        <a href="/help" class="footer-link">Help Center</a>
+                        <a href="/feedback" class="footer-link">Feedback</a>
+                    </div>
                 </div>
             </div>
             
-            <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--gray-700); color: var(--gray-500); font-size: 0.875rem;">
-                © 2024 MiniLink. All rights reserved.
+            <div class="footer-bottom">
+                <p>&copy; <%= new Date().getFullYear() %> MiniLink. All rights reserved.</p>
+                <div class="footer-social">
+                    <a href="#" class="social-link" title="GitHub">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    <a href="#" class="social-link" title="Twitter">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#" class="social-link" title="LinkedIn">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
+                </div>
             </div>
         </div>
     </footer>
 
-    <!-- Scripts -->
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
     <script src="/js/main.js"></script>
+    
+    <!-- Page-specific scripts -->
+    <% if (typeof scripts !== 'undefined') { %>
+        <%- scripts %>
+    <% } %>
 </body>
 </html> 

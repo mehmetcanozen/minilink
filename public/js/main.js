@@ -1,620 +1,795 @@
-// MiniLink Frontend JavaScript
+// MiniLink Frontend JavaScript - Enhanced Version
 
-// Global variables
-let recentUrls = [];
-let popularUrls = [];
-let systemStats = {};
-
-// DOM ready
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
-
-// Initialize the application
-function initializeApp() {
-    setupEventListeners();
-    loadInitialData();
-    setupFormValidation();
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    // URL shortening form
-    const shortenForm = document.getElementById('shortenForm');
-    if (shortenForm) {
-        shortenForm.addEventListener('submit', handleShortenUrl);
+// Global state management
+class AppState {
+    constructor() {
+        this.recentUrls = [];
+        this.popularUrls = [];
+        this.systemStats = {};
+        this.currentPage = this.detectCurrentPage();
     }
 
-    // URL lookup form (dashboard)
-    const urlLookupForm = document.getElementById('urlLookupForm');
-    if (urlLookupForm) {
-        urlLookupForm.addEventListener('submit', handleUrlLookup);
-    }
-
-    // Copy buttons
-    document.addEventListener('click', function(e) {
-        if (e.target.id === 'copyBtn' || e.target.closest('#copyBtn')) {
-            handleCopyUrl();
-        }
-        if (e.target.id === 'copyUrlBtn' || e.target.closest('#copyUrlBtn')) {
-            handleCopyUrlFromStats();
-        }
-    });
-
-    // QR code buttons
-    document.addEventListener('click', function(e) {
-        if (e.target.id === 'qrBtn' || e.target.closest('#qrBtn')) {
-            handleGenerateQR();
-        }
-        if (e.target.id === 'qrCodeBtn' || e.target.closest('#qrCodeBtn')) {
-            handleGenerateQRFromStats();
-        }
-    });
-
-    // Refresh buttons
-    const refreshRecentBtn = document.getElementById('refreshRecentBtn');
-    if (refreshRecentBtn) {
-        refreshRecentBtn.addEventListener('click', loadRecentUrls);
-    }
-
-    const refreshPopularBtn = document.getElementById('refreshPopularBtn');
-    if (refreshPopularBtn) {
-        refreshPopularBtn.addEventListener('click', loadPopularUrls);
+    detectCurrentPage() {
+        const path = window.location.pathname;
+        if (path === '/') return 'home';
+        if (path === '/dashboard') return 'dashboard';
+        if (path.includes('/stats')) return 'stats';
+        return 'other';
     }
 }
 
-// Load initial data
-function loadInitialData() {
-    if (document.getElementById('recentUrlsContainer')) {
-        loadRecentUrls();
+// Main application class
+class MiniLinkApp {
+    constructor() {
+        this.state = new AppState();
+        this.initializeApp();
     }
-    if (document.getElementById('popularUrlsContainer')) {
-        loadPopularUrls();
-    }
-    if (document.getElementById('systemStatsContainer')) {
-        loadSystemStats();
-    }
-}
 
-// Setup form validation
-function setupFormValidation() {
-    const forms = document.querySelectorAll('.needs-validation');
-    forms.forEach(form => {
-        form.addEventListener('submit', function(event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
+    initializeApp() {
+        this.setupEventListeners();
+        this.loadInitialData();
+        this.setupAnimations();
+    }
+
+    setupEventListeners() {
+        // URL shortening form (new structure)
+        const urlForm = document.getElementById('urlForm');
+        if (urlForm) {
+            urlForm.addEventListener('submit', (e) => this.handleUrlShortening(e));
+        }
+
+        // Expiration radio buttons
+        const expirationInputs = document.querySelectorAll('input[name="expiration"]');
+        expirationInputs.forEach(input => {
+            input.addEventListener('change', () => this.handleExpirationChange());
+        });
+
+        // URL lookup form (dashboard)
+        const urlLookupForm = document.getElementById('urlLookupForm');
+        if (urlLookupForm) {
+            urlLookupForm.addEventListener('click', (e) => {
+                if (e.target.matches('button[type="submit"]')) {
+                    e.preventDefault();
+                    this.handleUrlLookup();
+                }
+            });
+        }
+
+        // Copy buttons (enhanced)
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-copy]') || e.target.closest('[data-copy]')) {
+                e.preventDefault();
+                this.handleCopyToClipboard(e);
             }
-            form.classList.add('was-validated');
-        });
-    });
-}
-
-// Handle URL shortening
-async function handleShortenUrl(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const originalUrl = form.originalUrl.value.trim();
-    const submitBtn = document.getElementById('shortenBtn');
-    const btnText = submitBtn.querySelector('.btn-text');
-    
-    if (!originalUrl) {
-        showError('Please enter a valid URL');
-        return;
-    }
-
-    // Update button state
-    submitBtn.disabled = true;
-    btnText.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Shortening...';
-
-    try {
-        const response = await fetch('/api/shorten', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ originalUrl })
         });
 
-        const data = await response.json();
+        // QR code buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-qr]') || e.target.closest('[data-qr]')) {
+                e.preventDefault();
+                this.handleGenerateQR(e);
+            }
+        });
 
-        if (data.success) {
-            displayShortenedUrl(data.data);
-            form.reset();
-            form.classList.remove('was-validated');
-            hideError();
-            loadRecentUrls(); // Refresh recent URLs
-        } else {
-            showError(data.error.message || 'Failed to shorten URL');
-        }
-    } catch (error) {
-        console.error('Error shortening URL:', error);
-        showError('Network error. Please try again.');
-    } finally {
-        // Reset button state
-        submitBtn.disabled = false;
-        btnText.innerHTML = '<i class="fas fa-magic me-2"></i>Shorten URL';
+        // Refresh buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-refresh]') || e.target.closest('[data-refresh]')) {
+                e.preventDefault();
+                this.handleRefresh(e);
+            }
+        });
+
+        // Share buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-share]') || e.target.closest('[data-share]')) {
+                e.preventDefault();
+                this.handleShare(e);
+            }
+        });
     }
-}
 
-// Display shortened URL result
-function displayShortenedUrl(urlData) {
-    const resultSection = document.getElementById('resultSection');
-    const shortUrlInput = document.getElementById('shortUrl');
-    const clickCountSpan = document.getElementById('clickCount');
-    const createdDateSpan = document.getElementById('createdDate');
-    const visitLink = document.getElementById('visitLink');
-    const statsLink = document.getElementById('statsLink');
+    loadInitialData() {
+        // Load data based on current page
+        switch (this.state.currentPage) {
+            case 'home':
+                this.loadRecentUrls();
+                break;
+            case 'dashboard':
+                this.loadSystemStats();
+                this.loadRecentUrls();
+                this.loadPopularUrls();
+                break;
+            case 'stats':
+                // Stats page loads its own data
+                break;
+        }
+    }
 
-    if (resultSection && shortUrlInput) {
-        shortUrlInput.value = urlData.shortUrl;
-        clickCountSpan.textContent = urlData.clickCount;
-        createdDateSpan.textContent = formatDate(urlData.createdAt);
+    setupAnimations() {
+        // Intersection Observer for scroll animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        // Observe elements for animation
+        document.querySelectorAll('.card, .stat-item, .url-item').forEach(el => {
+            observer.observe(el);
+        });
+    }
+
+    // Enhanced URL shortening with expiration support
+    async handleUrlShortening(event) {
+        event.preventDefault();
         
-        visitLink.href = urlData.shortUrl;
-        statsLink.href = `/${urlData.shortSlug}/stats`;
-
-        resultSection.style.display = 'block';
-        resultSection.classList.add('fade-in');
+        const form = event.target;
+        const formData = new FormData(form);
+        const originalUrl = formData.get('originalUrl');
+        const expiration = formData.get('expiration');
         
-        // Scroll to result
-        resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Validate URL
+        if (!this.isValidUrl(originalUrl)) {
+            this.showError('Please enter a valid URL starting with http:// or https://');
+            return;
+        }
+
+        // Prepare request data
+        const requestData = {
+            originalUrl: originalUrl
+        };
+
+        // Handle expiration
+        if (expiration && expiration !== 'none') {
+            if (expiration === 'custom') {
+                const customDate = formData.get('customExpirationDate');
+                if (!customDate) {
+                    this.showError('Please select an expiration date');
+                    return;
+                }
+                requestData.expiresAt = new Date(customDate).toISOString();
+            } else {
+                const expirationDate = this.calculateExpirationDate(expiration);
+                requestData.expiresAt = expirationDate.toISOString();
+            }
+        }
+
+        this.showLoading();
+        this.hideError();
+
+        try {
+            const response = await fetch('/api/shorten', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.showSuccess(result.data);
+                this.loadRecentUrls(); // Refresh recent URLs
+            } else {
+                throw new Error(result.error?.message || 'Failed to shorten URL');
+            }
+        } catch (error) {
+            this.showError(error.message);
+        } finally {
+            this.hideLoading();
+        }
     }
-}
 
-// Handle URL lookup (dashboard)
-async function handleUrlLookup(event) {
-    event.preventDefault();
-    
-    const form = event.target;
-    const slug = form.slugInput.value.trim();
-    
-    if (!slug) {
-        showUrlLookupError('Please enter a URL slug');
-        return;
+    calculateExpirationDate(expiration) {
+        const now = new Date();
+        switch (expiration) {
+            case '1d':
+                return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            case '1w':
+                return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            case '1m':
+                return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            default:
+                return now;
+        }
     }
 
-    showUrlLookupLoading();
-
-    try {
-        const response = await fetch(`/${slug}/stats`);
-        const data = await response.json();
-
-        if (data.success) {
-            displayUrlStats(data.data, slug);
+    handleExpirationChange() {
+        const selectedValue = document.querySelector('input[name="expiration"]:checked').value;
+        const customDateContainer = document.getElementById('customDateContainer');
+        const customDateInput = document.getElementById('customExpirationDate');
+        
+        if (selectedValue === 'custom') {
+            customDateContainer.style.display = 'block';
+            customDateInput.required = true;
         } else {
-            showUrlNotFound();
+            customDateContainer.style.display = 'none';
+            customDateInput.required = false;
         }
-    } catch (error) {
-        console.error('Error looking up URL:', error);
-        showUrlLookupError('Network error. Please try again.');
     }
-}
 
-// Display URL statistics
-function displayUrlStats(urlData, slug) {
-    const detailsSection = document.getElementById('urlDetailsSection');
-    const originalUrlDisplay = document.getElementById('originalUrlDisplay');
-    const urlClickCount = document.getElementById('urlClickCount');
-    const shortUrlDisplay = document.getElementById('shortUrlDisplay');
-    const urlCreatedDate = document.getElementById('urlCreatedDate');
-    const visitUrlBtn = document.getElementById('visitUrlBtn');
-
-    if (detailsSection && originalUrlDisplay) {
-        originalUrlDisplay.textContent = urlData.originalUrl;
-        urlClickCount.textContent = urlData.clickCount;
-        shortUrlDisplay.value = `${window.location.origin}/${slug}`;
-        urlCreatedDate.textContent = formatDate(urlData.createdAt);
-        visitUrlBtn.href = `/${slug}`;
-
-        hideUrlLookupMessages();
-        detailsSection.style.display = 'block';
-        detailsSection.classList.add('fade-in');
-    }
-}
-
-// Copy URL to clipboard
-async function handleCopyUrl() {
-    const shortUrlInput = document.getElementById('shortUrl');
-    if (shortUrlInput) {
+    isValidUrl(string) {
         try {
-            await navigator.clipboard.writeText(shortUrlInput.value);
-            showCopySuccess('copyBtn');
-        } catch (error) {
-            fallbackCopy(shortUrlInput.value);
+            new URL(string);
+            return true;
+        } catch (_) {
+            return false;
         }
     }
-}
 
-// Copy URL from stats page
-async function handleCopyUrlFromStats() {
-    const shortUrlDisplay = document.getElementById('shortUrlDisplay');
-    if (shortUrlDisplay) {
+    showLoading() {
+        const loadingState = document.getElementById('loadingState');
+        const successCard = document.getElementById('successCard');
+        const errorSection = document.getElementById('errorSection');
+        
+        if (loadingState) loadingState.style.display = 'block';
+        if (successCard) successCard.style.display = 'none';
+        if (errorSection) errorSection.style.display = 'none';
+    }
+
+    hideLoading() {
+        const loadingState = document.getElementById('loadingState');
+        if (loadingState) loadingState.style.display = 'none';
+    }
+
+    showSuccess(data) {
+        const successCard = document.getElementById('successCard');
+        if (!successCard) return;
+
+        // Populate success data
+        const shortUrlResult = document.getElementById('shortUrlResult');
+        const visitUrlBtn = document.getElementById('visitUrlBtn');
+        const statsUrlBtn = document.getElementById('statsUrlBtn');
+        const createdTime = document.getElementById('createdTime');
+        const clickCount = document.getElementById('clickCount');
+        const expirationInfo = document.getElementById('expirationInfo');
+        const expirationTime = document.getElementById('expirationTime');
+
+        if (shortUrlResult) shortUrlResult.value = data.shortUrl;
+        if (visitUrlBtn) visitUrlBtn.href = data.shortUrl;
+        if (statsUrlBtn) statsUrlBtn.href = `/${data.shortSlug}/stats`;
+        if (createdTime) createdTime.textContent = new Date(data.createdAt).toLocaleString();
+        if (clickCount) clickCount.textContent = data.clickCount;
+
+        // Handle expiration display
+        if (data.expiresAt && expirationInfo && expirationTime) {
+            expirationTime.textContent = new Date(data.expiresAt).toLocaleString();
+            expirationInfo.style.display = 'flex';
+        } else if (expirationInfo) {
+            expirationInfo.style.display = 'none';
+        }
+
+        successCard.style.display = 'block';
+        successCard.classList.add('animate-in');
+        
+        this.showToast('URL shortened successfully!', 'success');
+    }
+
+    showError(message) {
+        const errorSection = document.getElementById('errorSection');
+        const errorTitle = document.getElementById('errorTitle');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        if (errorTitle) errorTitle.textContent = 'Error';
+        if (errorMessage) errorMessage.textContent = message;
+        if (errorSection) {
+            errorSection.style.display = 'block';
+            errorSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        this.showToast(message, 'error');
+    }
+
+    hideError() {
+        const errorSection = document.getElementById('errorSection');
+        if (errorSection) errorSection.style.display = 'none';
+    }
+
+    // Enhanced URL lookup
+    async handleUrlLookup() {
+        const slugInput = document.getElementById('slugInput');
+        if (!slugInput) return;
+        
+        const slug = slugInput.value.trim();
+        if (!slug) {
+            this.showUrlLookupError('Please enter a URL slug');
+            return;
+        }
+
+        this.showUrlLookupLoading();
+
         try {
-            await navigator.clipboard.writeText(shortUrlDisplay.value);
-            showCopySuccess('copyUrlBtn');
+            const response = await fetch(`/api/urls/${slug}/stats`);
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                this.showUrlDetails(result.data, slug);
+            } else if (response.status === 404) {
+                this.showUrlNotFound();
+            } else {
+                throw new Error(result.error?.message || 'Failed to lookup URL');
+            }
         } catch (error) {
-            fallbackCopy(shortUrlDisplay.value);
+            this.showUrlLookupError(error.message);
         }
     }
-}
 
-// Fallback copy method
-function fallbackCopy(text) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    showCopySuccess();
-}
+    showUrlDetails(data, slug) {
+        const detailsSection = document.getElementById('urlDetailsSection');
+        const originalUrlDisplay = document.getElementById('originalUrlDisplay');
+        const urlClickCount = document.getElementById('urlClickCount');
+        const shortUrlDisplay = document.getElementById('shortUrlDisplay');
+        const urlCreatedDate = document.getElementById('urlCreatedDate');
+        const visitUrlBtn = document.getElementById('visitUrlBtn');
+        const viewStatsBtn = document.getElementById('viewStatsBtn');
 
-// Show copy success feedback
-function showCopySuccess(buttonId = 'copyBtn') {
-    const button = document.getElementById(buttonId);
-    if (button) {
-        const originalContent = button.innerHTML;
-        button.classList.add('copy-success');
-        button.innerHTML = '<i class="fas fa-check"></i>';
+        if (detailsSection && originalUrlDisplay) {
+            originalUrlDisplay.textContent = data.originalUrl;
+            urlClickCount.textContent = data.clickCount;
+            shortUrlDisplay.value = `${window.location.origin}/${slug}`;
+            urlCreatedDate.textContent = this.formatDate(data.createdAt);
+            visitUrlBtn.href = `/${slug}`;
+            viewStatsBtn.href = `/${slug}/stats`;
+
+            this.hideUrlLookupMessages();
+            detailsSection.style.display = 'block';
+            detailsSection.classList.add('fade-in');
+            
+            this.showToast('URL found successfully!', 'success');
+        }
+    }
+
+    showUrlLookupLoading() {
+        this.hideUrlLookupMessages();
+        const container = document.getElementById('urlDetailsSection');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-custom mx-auto"></div>
+                    <p class="text-muted mt-3">Looking up URL...</p>
+                </div>
+            `;
+            container.style.display = 'block';
+        }
+    }
+
+    showUrlNotFound() {
+        this.hideUrlLookupMessages();
+        const notFoundSection = document.getElementById('urlNotFoundSection');
+        if (notFoundSection) {
+            notFoundSection.style.display = 'block';
+        }
+    }
+
+    showUrlLookupError(message) {
+        this.hideUrlLookupMessages();
+        const errorMessageEl = document.getElementById('urlLookupErrorMessage');
+        const errorSection = document.getElementById('urlLookupError');
+        
+        if (errorMessageEl) errorMessageEl.textContent = message;
+        if (errorSection) errorSection.style.display = 'block';
+        
+        this.showToast(message, 'error');
+    }
+
+    hideUrlLookupMessages() {
+        const sections = ['urlDetailsSection', 'urlNotFoundSection', 'urlLookupError'];
+        sections.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+    }
+
+    // Enhanced copy to clipboard
+    async handleCopyToClipboard(event) {
+        const element = event.target.closest('[data-copy]') || event.target;
+        const textToCopy = element.dataset.copy || element.value || element.textContent;
+        
+        if (!textToCopy) return;
+
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            this.showCopySuccess(element);
+        } catch (err) {
+            this.fallbackCopy(textToCopy);
+        }
+    }
+
+    fallbackCopy(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        this.showToast('URL copied to clipboard!', 'success');
+    }
+
+    showCopySuccess(element) {
+        const originalContent = element.innerHTML;
+        element.classList.add('copy-success');
+        element.innerHTML = '<i class="fas fa-check"></i>';
         
         setTimeout(() => {
-            button.classList.remove('copy-success');
-            button.innerHTML = originalContent;
+            element.classList.remove('copy-success');
+            element.innerHTML = originalContent;
         }, 2000);
+        
+        this.showToast('URL copied to clipboard!', 'success');
     }
-    
-    showToast('URL copied to clipboard!', 'success');
-}
 
-// Generate QR code
-function handleGenerateQR() {
-    const shortUrlInput = document.getElementById('shortUrl');
-    if (shortUrlInput && shortUrlInput.value) {
-        generateQRCode(shortUrlInput.value);
+    // Enhanced QR code generation
+    handleGenerateQR(event) {
+        const element = event.target.closest('[data-qr]') || event.target;
+        const url = element.dataset.qr || element.value || element.textContent;
+        
+        if (!url) return;
+
+        this.generateQRCode(url);
     }
-}
 
-// Generate QR code from stats
-function handleGenerateQRFromStats() {
-    const shortUrlDisplay = document.getElementById('shortUrlDisplay');
-    if (shortUrlDisplay && shortUrlDisplay.value) {
-        generateQRCode(shortUrlDisplay.value);
+    generateQRCode(url) {
+        const qrCodeDisplay = document.getElementById('qrCodeDisplay');
+        if (qrCodeDisplay) {
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+            qrCodeDisplay.innerHTML = `<img src="${qrUrl}" alt="QR Code" style="width: 100%; height: auto;">`;
+            
+            const qrModal = document.getElementById('qrModal');
+            if (qrModal) qrModal.classList.add('show');
+        }
     }
-}
 
-// Generate QR code modal
-function generateQRCode(url) {
-    const qrCodeContainer = document.getElementById('qrCodeContainer');
-    if (qrCodeContainer) {
-        qrCodeContainer.innerHTML = `
-            <div class="qr-code-container">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}" 
-                     alt="QR Code" class="img-fluid">
+    // Enhanced refresh functionality
+    handleRefresh(event) {
+        const element = event.target.closest('[data-refresh]') || event.target;
+        const refreshType = element.dataset.refresh;
+        
+        switch (refreshType) {
+            case 'recent':
+                this.loadRecentUrls();
+                break;
+            case 'popular':
+                this.loadPopularUrls();
+                break;
+            case 'stats':
+                this.loadSystemStats();
+                break;
+            case 'all':
+                this.loadSystemStats();
+                this.loadRecentUrls();
+                this.loadPopularUrls();
+                break;
+        }
+        
+        this.showToast('Data refreshed!', 'success');
+    }
+
+    // Enhanced share functionality
+    async handleShare(event) {
+        const element = event.target.closest('[data-share]') || event.target;
+        const url = element.dataset.share || element.value || element.textContent;
+        
+        if (!url) return;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Check out this link',
+                    text: 'Shortened URL created with MiniLink',
+                    url: url
+                });
+            } catch (err) {
+                this.handleCopyToClipboard({ target: element });
+            }
+        } else {
+            this.handleCopyToClipboard({ target: element });
+        }
+    }
+
+    // Data loading functions
+    async loadRecentUrls() {
+        const container = document.getElementById('recentUrlsContainer');
+        if (!container) return;
+
+        try {
+            this.showLoadingState(container, 'Loading recent URLs...');
+            
+            const response = await fetch('/api/urls/recent?limit=5');
+            const result = await response.json();
+
+            if (result.success && result.data.length > 0) {
+                this.state.recentUrls = result.data;
+                this.displayRecentUrls(container, result.data);
+            } else {
+                this.showEmptyState(container, 'No URLs Yet', 'Create your first short URL above');
+            }
+        } catch (error) {
+            console.error('Failed to load recent URLs:', error);
+            this.showErrorState(container, 'Failed to load recent URLs');
+        }
+    }
+
+    async loadPopularUrls() {
+        const container = document.getElementById('popularUrlsContainer');
+        if (!container) return;
+
+        try {
+            this.showLoadingState(container, 'Loading popular URLs...');
+            
+            const response = await fetch('/api/urls/popular?limit=5');
+            const result = await response.json();
+
+            if (result.success && result.data.length > 0) {
+                this.state.popularUrls = result.data;
+                this.displayPopularUrls(container, result.data);
+            } else {
+                this.showEmptyState(container, 'No Popular URLs', 'URLs with clicks will appear here');
+            }
+        } catch (error) {
+            console.error('Failed to load popular URLs:', error);
+            this.showErrorState(container, 'Failed to load popular URLs');
+        }
+    }
+
+    async loadSystemStats() {
+        try {
+            const response = await fetch('/api/stats');
+            const result = await response.json();
+
+            if (result.success) {
+                this.state.systemStats = result.data;
+                this.displaySystemStats(result.data);
+            }
+        } catch (error) {
+            console.error('Failed to load system stats:', error);
+        }
+    }
+
+    // Display functions
+    displayRecentUrls(container, urls) {
+        const urlList = document.createElement('div');
+        urlList.className = 'url-list enhanced fade-in';
+        
+        urls.forEach(url => {
+            const urlItem = this.createURLItem(url, 'recent');
+            urlList.appendChild(urlItem);
+        });
+        
+        container.innerHTML = '';
+        container.appendChild(urlList);
+    }
+
+    displayPopularUrls(container, urls) {
+        const urlList = document.createElement('div');
+        urlList.className = 'url-list enhanced fade-in';
+        
+        urls.forEach((url, index) => {
+            const urlItem = this.createURLItem(url, 'popular', index);
+            urlList.appendChild(urlItem);
+        });
+        
+        container.innerHTML = '';
+        container.appendChild(urlList);
+    }
+
+    createURLItem(url, type, index = 0) {
+        const urlItem = document.createElement('div');
+        urlItem.className = 'url-item enhanced';
+        
+        const rankBadge = type === 'popular' ? `
+            <div class="rank-badge rank-${index + 1}">
+                ${index + 1}
+            </div>
+        ` : '';
+        
+        urlItem.innerHTML = `
+            <div class="url-main">
+                ${rankBadge}
+                <div class="url-info">
+                    <div class="url-slug">/${url.shortSlug}</div>
+                    <div class="url-original">${this.truncateUrl(url.originalUrl, 60)}</div>
+                    ${url.expiresAt ? `
+                        <div class="url-expiration">
+                            <i class="fas fa-clock"></i>
+                            Expires: ${new Date(url.expiresAt).toLocaleDateString()}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            <div class="url-meta">
+                <div class="click-info">
+                    <span class="click-count">${url.clickCount}</span>
+                    <span class="click-label">clicks</span>
+                </div>
+                ${type === 'recent' ? `
+                    <span class="url-time">${this.formatRelativeTime(url.createdAt)}</span>
+                ` : ''}
+                <a href="/${url.shortSlug}/stats" class="btn btn-sm btn-outline enhanced">
+                    <i class="fas fa-chart-line"></i>
+                </a>
             </div>
         `;
         
-        const qrModal = new bootstrap.Modal(document.getElementById('qrModal'));
-        qrModal.show();
+        return urlItem;
     }
-}
 
-// Load recent URLs
-async function loadRecentUrls() {
-    const container = document.getElementById('recentUrlsContainer');
-    if (!container) return;
+    displaySystemStats(stats) {
+        const totalUrlsEl = document.getElementById('totalUrls');
+        const totalClicksEl = document.getElementById('totalClicks');
+        const avgClicksEl = document.getElementById('avgClicksPerUrl');
+        const systemUptimeEl = document.getElementById('systemUptime');
 
-    try {
-        showLoadingState(container, 'Loading recent URLs...');
+        if (totalUrlsEl) totalUrlsEl.textContent = this.formatNumber(stats.totalUrls);
+        if (totalClicksEl) totalClicksEl.textContent = this.formatNumber(stats.totalClicks);
+        if (avgClicksEl) {
+            const avgClicks = stats.totalUrls > 0 ? (stats.totalClicks / stats.totalUrls).toFixed(1) : '0';
+            avgClicksEl.textContent = avgClicks;
+        }
+        if (systemUptimeEl) {
+            // Mock uptime for now
+            const uptimeHours = Math.floor(Math.random() * 720) + 24;
+            const uptimeDays = Math.floor(uptimeHours / 24);
+            systemUptimeEl.textContent = `${uptimeDays}d ${uptimeHours % 24}h`;
+        }
+    }
+
+    // Utility functions
+    showLoadingState(container, message = 'Loading...') {
+        container.innerHTML = `
+            <div class="loading-placeholder">
+                <div class="spinner"></div>
+                <div class="loading-text">${message}</div>
+            </div>
+        `;
+    }
+
+    showEmptyState(container, title, message) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-link"></i>
+                </div>
+                <h4 class="empty-title">${title}</h4>
+                <p class="empty-subtitle">${message}</p>
+            </div>
+        `;
+    }
+
+    showErrorState(container, message) {
+        container.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4 class="error-title">Error</h4>
+                <p class="error-subtitle">${message}</p>
+            </div>
+        `;
+    }
+
+    showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
         
-        const response = await fetch('/api/urls/recent?limit=6');
-        const data = await response.json();
-
-        if (data.success && data.data.length > 0) {
-            recentUrls = data.data;
-            displayUrls(container, recentUrls, 'recent');
-        } else {
-            showEmptyState(container, 'No URLs found', 'Create your first short URL above!');
-        }
-    } catch (error) {
-        console.error('Error loading recent URLs:', error);
-        showErrorState(container, 'Failed to load recent URLs');
-    }
-}
-
-// Load popular URLs
-async function loadPopularUrls() {
-    const container = document.getElementById('popularUrlsContainer');
-    if (!container) return;
-
-    try {
-        showLoadingState(container, 'Loading popular URLs...');
+        const container = document.querySelector('.toast-container') || this.createToastContainer();
+        container.appendChild(toast);
         
-        const response = await fetch('/api/urls/popular?limit=10');
-        const data = await response.json();
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => {
+                if (container.contains(toast)) {
+                    container.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
 
-        if (data.success && data.data.length > 0) {
-            popularUrls = data.data;
-            displayPopularUrls(container, popularUrls);
-        } else {
-            showEmptyState(container, 'No popular URLs yet', 'URLs with clicks will appear here');
+    createToastContainer() {
+        const container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    formatDate(dateString) {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    formatRelativeTime(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+        
+        if (diffInSeconds < 60) return 'just now';
+        if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+        if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+        return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    }
+
+    formatNumber(num) {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
+    }
+
+    truncateUrl(url, maxLength) {
+        if (url.length <= maxLength) return url;
+        return url.substring(0, maxLength - 3) + '...';
+    }
+}
+
+// Global functions for compatibility with existing code
+function copyToClipboard(text) {
+    if (window.miniLinkApp) {
+        const event = { target: { dataset: { copy: text } } };
+        window.miniLinkApp.handleCopyToClipboard(event);
+    }
+}
+
+function generateQRCode(url) {
+    if (window.miniLinkApp) {
+        const event = { target: { dataset: { qr: url } } };
+        window.miniLinkApp.handleGenerateQR(event);
+    }
+}
+
+function closeQRModal() {
+    const qrModal = document.getElementById('qrModal');
+    if (qrModal) qrModal.classList.remove('show');
+}
+
+function downloadQRCode() {
+    const shortUrl = document.getElementById('shortUrlResult')?.value || 
+                    document.getElementById('shortUrlDisplay')?.value;
+    if (shortUrl) {
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shortUrl)}`;
+        const link = document.createElement('a');
+        link.download = 'qr-code.png';
+        link.href = qrUrl;
+        link.click();
+        if (window.miniLinkApp) {
+            window.miniLinkApp.showToast('QR Code downloaded!', 'success');
         }
-    } catch (error) {
-        console.error('Error loading popular URLs:', error);
-        showErrorState(container, 'Failed to load popular URLs');
     }
 }
 
-// Load system statistics
-async function loadSystemStats() {
-    try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
+function refreshStats() {
+    location.reload();
+}
 
-        if (data.success) {
-            systemStats = data.data;
-            displaySystemStats(systemStats);
-        }
-    } catch (error) {
-        console.error('Error loading system stats:', error);
+function shareUrl() {
+    const url = document.getElementById('shortUrlResult')?.value || 
+                document.getElementById('shortUrlDisplay')?.value;
+    if (url && window.miniLinkApp) {
+        const event = { target: { dataset: { share: url } } };
+        window.miniLinkApp.handleShare(event);
     }
 }
 
-// Display URLs in grid format
-function displayUrls(container, urls, type) {
-    const urlCards = urls.map(url => `
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card url-card h-100">
-                <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <h6 class="card-title mb-0 text-truncate fw-bold">
-                            <i class="fas fa-link me-2 text-primary"></i>
-                            <a href="/${url.shortSlug}/stats" class="text-decoration-none text-dark stretched-link">
-                                /${url.shortSlug}
-                            </a>
-                        </h6>
-                        <span class="click-badge">${url.clickCount}</span>
-                    </div>
-                    <p class="card-text url-text text-muted small mb-3" title="${url.originalUrl}">
-                        ${truncateUrl(url.originalUrl, 50)}
-                    </p>
-                    <div class="d-flex justify-content-between align-items-center mt-auto">
-                        <small class="text-muted">
-                            <i class="fas fa-calendar me-1"></i>
-                            ${formatRelativeTime(url.createdAt)}
-                        </small>
-                        <a href="/${url.shortSlug}" class="btn btn-sm btn-outline-primary" target="_blank" title="Visit URL">
-                            <i class="fas fa-external-link-alt"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    container.innerHTML = urlCards;
-    container.classList.add('fade-in');
-}
-
-// Display popular URLs in list format
-function displayPopularUrls(container, urls) {
-    const urlList = urls.map((url, index) => `
-        <a href="/${url.shortSlug}/stats" class="text-decoration-none">
-            <div class="popular-url-item d-flex align-items-center justify-content-between">
-                <div class="d-flex align-items-center flex-grow-1 overflow-hidden">
-                    <div class="rank-badge flex-shrink-0 me-3">
-                        ${index + 1}
-                    </div>
-                    <div class="flex-grow-1 overflow-hidden">
-                        <h6 class="mb-0 fw-bold text-primary text-truncate">/${url.shortSlug}</h6>
-                        <p class="mb-0 text-muted small url-text text-truncate" title="${url.originalUrl}">
-                            ${truncateUrl(url.originalUrl, 60)}
-                        </p>
-                    </div>
-                </div>
-                <div class="ms-3 text-end flex-shrink-0">
-                    <div class="click-badge">${url.clickCount} clicks</div>
-                </div>
-            </div>
-        </a>
-    `).join('');
-
-    container.innerHTML = urlList;
-    container.classList.add('fade-in');
-}
-
-// Display system statistics
-function displaySystemStats(stats) {
-    const totalUrlsEl = document.getElementById('totalUrls');
-    const totalClicksEl = document.getElementById('totalClicks');
-    const avgClicksEl = document.getElementById('avgClicksPerUrl');
-    const systemUptimeEl = document.getElementById('systemUptime');
-
-    if (totalUrlsEl) {
-        totalUrlsEl.innerHTML = formatNumber(stats.totalUrls);
-    }
-    if (totalClicksEl) {
-        totalClicksEl.innerHTML = formatNumber(stats.totalClicks);
-    }
-    if (avgClicksEl) {
-        const avgClicks = stats.totalUrls > 0 ? (stats.totalClicks / stats.totalUrls).toFixed(1) : '0';
-        avgClicksEl.innerHTML = avgClicks;
-    }
-    if (systemUptimeEl) {
-        // This would need to be passed from the server
-        systemUptimeEl.innerHTML = 'Online';
-    }
-}
-
-// View URL statistics
-function viewUrlStats(slug) {
-    if (window.location.pathname === '/dashboard') {
-        // On dashboard page, populate the lookup form
-        const slugInput = document.getElementById('slugInput');
-        if (slugInput) {
-            slugInput.value = slug;
-            document.getElementById('urlLookupForm').dispatchEvent(new Event('submit'));
-        }
-    } else {
-        // Redirect to stats page
-        window.location.href = `/${slug}/stats`;
-    }
-}
-
-// Utility functions
-function showLoadingState(container, message = 'Loading...') {
-    container.innerHTML = `
-        <div class="col-12 text-center py-5">
-            <div class="spinner-custom mx-auto"></div>
-            <p class="text-muted mt-3">${message}</p>
-        </div>
-    `;
-}
-
-function showEmptyState(container, title, message) {
-    container.innerHTML = `
-        <div class="col-12 text-center py-5">
-            <div class="mb-3">
-                <i class="fas fa-inbox fa-4x text-gray-300"></i>
-            </div>
-            <h5 class="fw-bold text-gray-600">${title}</h5>
-            <p class="text-muted">${message}</p>
-        </div>
-    `;
-}
-
-function showErrorState(container, message) {
-    container.innerHTML = `
-        <div class="col-12 text-center py-5">
-            <div class="mb-3">
-                <i class="fas fa-exclamation-triangle fa-4x text-warning"></i>
-            </div>
-            <h5 class="fw-bold text-danger">Error</h5>
-            <p class="text-muted">${message}</p>
-        </div>
-    `;
-}
-
-function showError(message) {
-    const errorSection = document.getElementById('errorSection');
-    const errorMessage = document.getElementById('errorMessage');
-    if (errorSection && errorMessage) {
-        errorMessage.textContent = message;
-        errorSection.style.display = 'block';
-        errorSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-}
-
-function hideError() {
-    const errorSection = document.getElementById('errorSection');
-    if (errorSection) {
-        errorSection.style.display = 'none';
-    }
-}
-
-function showUrlLookupLoading() {
-    hideUrlLookupMessages();
-    const container = document.getElementById('urlDetailsSection');
-    container.innerHTML = `
-        <div class="text-center py-4">
-            <div class="spinner-custom mx-auto"></div>
-            <p class="text-muted mt-3">Looking up URL...</p>
-        </div>
-    `;
-    container.style.display = 'block';
-}
-
-function showUrlNotFound() {
-    hideUrlLookupMessages();
-    document.getElementById('urlNotFoundSection').style.display = 'block';
-}
-
-function showUrlLookupError(message) {
-    hideUrlLookupMessages();
-    const errorMessageEl = document.getElementById('urlLookupErrorMessage');
-    if (errorMessageEl) {
-        errorMessageEl.textContent = message;
-        document.getElementById('urlLookupError').style.display = 'block';
-    }
-}
-
-function hideUrlLookupMessages() {
-    const sections = ['urlDetailsSection', 'urlNotFoundSection', 'urlLookupError'];
-    sections.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.style.display = 'none';
-        }
-    });
-}
-
-function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function formatRelativeTime(dateString) {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffInSeconds = Math.floor((now - date) / 1000);
-
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    window.miniLinkApp = new MiniLinkApp();
     
-    return formatDate(dateString);
-}
-
-function formatNumber(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-}
-
-function truncateUrl(url, maxLength) {
-    if (url.length <= maxLength) return url;
-    return url.substring(0, maxLength) + '...';
-}
-
-function showToast(message, type = 'success') {
-    // Create toast container if it doesn't exist
-    let toastContainer = document.querySelector('.toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container';
-        document.body.appendChild(toastContainer);
-    }
-
-    // Create toast element
-    const toastId = 'toast-' + Date.now();
-    const toastHtml = `
-        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
-
-    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-    
-    // Show toast
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
-    toast.show();
-
-    // Remove toast element after it's hidden
-    toastElement.addEventListener('hidden.bs.toast', () => {
-        toastElement.remove();
-    });
-} 
+    // Make functions globally available for compatibility
+    window.copyToClipboard = copyToClipboard;
+    window.generateQRCode = generateQRCode;
+    window.closeQRModal = closeQRModal;
+    window.downloadQRCode = downloadQRCode;
+    window.refreshStats = refreshStats;
+    window.shareUrl = shareUrl;
+}); 

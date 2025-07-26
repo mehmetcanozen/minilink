@@ -1,9 +1,9 @@
 <!-- Error Section -->
 <section class="section">
     <div class="container">
-        <div style="max-width: 600px; margin: 0 auto; text-align: center;">
+        <div class="error-container">
             <!-- Error Icon -->
-            <div style="font-size: 5rem; color: var(--gray-300); margin-bottom: 2rem;">
+            <div class="error-icon-large">
                 <% if (typeof statusCode !== 'undefined' && statusCode === 404) { %>
                     <i class="fas fa-search"></i>
                 <% } else { %>
@@ -12,16 +12,16 @@
             </div>
 
             <!-- Error Title and Message -->
-            <h1 style="color: var(--gray-800); margin-bottom: 1rem;">
+            <h1 class="error-title-large">
                 <%= typeof title !== 'undefined' ? title : 'Page Not Found' %>
             </h1>
             
-            <p style="color: var(--gray-600); font-size: 1.125rem; margin-bottom: 3rem;">
+            <p class="error-message-large">
                 <%= typeof message !== 'undefined' ? message : 'The page you are looking for does not exist.' %>
             </p>
 
             <!-- Action Buttons -->
-            <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 3rem;">
+            <div class="error-actions">
                 <% if (typeof backLink !== 'undefined' && typeof backLinkText !== 'undefined') { %>
                     <a href="<%= backLink %>" class="btn btn-primary btn-lg">
                         <i class="fas fa-arrow-left"></i>
@@ -42,27 +42,27 @@
 
             <!-- Additional Help for 404 -->
             <% if (typeof statusCode !== 'undefined' && statusCode === 404) { %>
-                <div class="card" style="text-align: left; margin-top: 3rem;">
-                    <div class="card-body">
-                        <h5 style="margin-bottom: 1.5rem;">What you can do:</h5>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
-                            <div>
-                                <h6 style="color: var(--primary); margin-bottom: 0.5rem;">
+                <div class="help-card">
+                    <div class="help-content">
+                        <h5 class="help-title">What you can do:</h5>
+                        <div class="help-grid">
+                            <div class="help-item">
+                                <h6 class="help-item-title">
                                     <i class="fas fa-check-circle"></i>
                                     Check the URL
                                 </h6>
-                                <ul style="color: var(--gray-600); margin: 0; padding-left: 1.5rem;">
+                                <ul class="help-list">
                                     <li>Make sure the URL is correct</li>
                                     <li>Check for typos in the short slug</li>
                                     <li>Verify the link wasn't deleted</li>
                                 </ul>
                             </div>
-                            <div>
-                                <h6 style="color: var(--success); margin-bottom: 0.5rem;">
+                            <div class="help-item">
+                                <h6 class="help-item-title">
                                     <i class="fas fa-plus-circle"></i>
                                     Create a New Link
                                 </h6>
-                                <ul style="color: var(--gray-600); margin: 0; padding-left: 1.5rem;">
+                                <ul class="help-list">
                                     <li>Go to the homepage</li>
                                     <li>Enter your long URL</li>
                                     <li>Get a new short link instantly</li>
@@ -74,12 +74,12 @@
             <% } %>
 
             <!-- Contact Support -->
-            <div style="margin-top: 3rem; padding: 2rem; background: var(--gray-50); border-radius: var(--radius-xl);">
-                <h6 style="color: var(--gray-700); margin-bottom: 1rem;">Still need help?</h6>
-                <p style="color: var(--gray-600); margin-bottom: 1.5rem;">
+            <div class="support-section">
+                <h6 class="support-title">Still need help?</h6>
+                <p class="support-message">
                     If you believe this is an error or need assistance, you can check our system status or contact support.
                 </p>
-                <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                <div class="support-actions">
                     <a href="/health" class="btn btn-outline">
                         <i class="fas fa-heart-pulse"></i>
                         System Status
