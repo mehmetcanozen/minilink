@@ -28,6 +28,16 @@ export class UrlService implements IUrlService {
     this.cacheService = cacheService;
   }
 
+  // Utility method to ensure Date fields are properly converted from strings (when retrieved from cache)
+  private ensureDateFields(url: UrlEntity): UrlEntity {
+    return {
+      ...url,
+      createdAt: url.createdAt instanceof Date ? url.createdAt : new Date(url.createdAt),
+      updatedAt: url.updatedAt instanceof Date ? url.updatedAt : new Date(url.updatedAt),
+      expiresAt: url.expiresAt ? (url.expiresAt instanceof Date ? url.expiresAt : new Date(url.expiresAt)) : undefined,
+    };
+  }
+
   async shortenUrl(dto: CreateUrlDto): Promise<CreateUrlResponseDto> {
     try {
       // Validate the original URL
@@ -41,17 +51,20 @@ export class UrlService implements IUrlService {
       if (cachedUrl && this.shouldReuseUrl(cachedUrl, dto.userId)) {
         logger.info('URL reused from cache', { originalUrl: dto.originalUrl.substring(0, 50) + '...', shortSlug: cachedUrl.shortSlug });
         
+        // Ensure Date fields are properly converted from strings (when retrieved from cache)
+        const urlWithProperDates = this.ensureDateFields(cachedUrl);
+        
         // Return cached result
         return {
-          id: cachedUrl.id,
-          originalUrl: cachedUrl.originalUrl,
-          shortSlug: cachedUrl.shortSlug,
-          shortUrl: cachedUrl.shortSlug ? 
-            `${config.server.baseUrl}/${cachedUrl.shortSlug}` : 
+          id: urlWithProperDates.id,
+          originalUrl: urlWithProperDates.originalUrl,
+          shortSlug: urlWithProperDates.shortSlug,
+          shortUrl: urlWithProperDates.shortSlug ? 
+            `${config.server.baseUrl}/${urlWithProperDates.shortSlug}` : 
             `${config.server.baseUrl}/error`,
-          clickCount: cachedUrl.clickCount,
-          createdAt: cachedUrl.createdAt,
-          userId: cachedUrl.userId,
+          clickCount: urlWithProperDates.clickCount,
+          createdAt: urlWithProperDates.createdAt,
+          userId: urlWithProperDates.userId,
         };
       }
 
@@ -64,16 +77,19 @@ export class UrlService implements IUrlService {
         await this.cacheService.cacheUrl(existingUrl.shortSlug, existingUrl);
         await this.cacheService.cacheUrlByOriginal(normalizedUrl, existingUrl);
 
+        // Ensure Date fields are properly converted from strings (when retrieved from cache)
+        const urlWithProperDates = this.ensureDateFields(existingUrl);
+
         return {
-          id: existingUrl.id,
-          originalUrl: existingUrl.originalUrl,
-          shortSlug: existingUrl.shortSlug,
-          shortUrl: existingUrl.shortSlug ? 
-            `${config.server.baseUrl}/${existingUrl.shortSlug}` : 
+          id: urlWithProperDates.id,
+          originalUrl: urlWithProperDates.originalUrl,
+          shortSlug: urlWithProperDates.shortSlug,
+          shortUrl: urlWithProperDates.shortSlug ? 
+            `${config.server.baseUrl}/${urlWithProperDates.shortSlug}` : 
             `${config.server.baseUrl}/error`,
-          clickCount: existingUrl.clickCount,
-          createdAt: existingUrl.createdAt,
-          userId: existingUrl.userId,
+          clickCount: urlWithProperDates.clickCount,
+          createdAt: urlWithProperDates.createdAt,
+          userId: urlWithProperDates.userId,
         };
       }
 
@@ -137,8 +153,11 @@ export class UrlService implements IUrlService {
         logger.debug('URL cached after database lookup', { slug });
       }
 
+      // Ensure Date fields are properly converted from strings (when retrieved from cache)
+      const urlWithProperDates = this.ensureDateFields(url);
+
       // Check if URL has expired
-      const isExpired = url.expiresAt ? new Date() > url.expiresAt : false;
+      const isExpired = urlWithProperDates.expiresAt ? new Date() > urlWithProperDates.expiresAt : false;
 
       // Process click asynchronously using BullMQ (only if not expired)
       if (!isExpired) {
@@ -157,7 +176,7 @@ export class UrlService implements IUrlService {
       });
 
       return {
-        originalUrl: url.originalUrl,
+        originalUrl: urlWithProperDates.originalUrl,
         clickCount: totalClickCount, // Return the real-time click count
         isExpired,
       };
@@ -188,31 +207,34 @@ export class UrlService implements IUrlService {
         await this.cacheService.cacheUrl(slug, url);
       }
 
+      // Ensure Date fields are properly converted from strings (when retrieved from cache)
+      const urlWithProperDates = this.ensureDateFields(url);
+
       // Get real-time click count from Redis if available
       const redisClickCount = await this.cacheService.getClickCount(slug);
-      const totalClickCount = url.clickCount + redisClickCount;
+      const totalClickCount = urlWithProperDates.clickCount + redisClickCount;
       
       // Calculate days since creation
-      const daysSinceCreation = Math.floor((Date.now() - url.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+      const daysSinceCreation = Math.floor((Date.now() - urlWithProperDates.createdAt.getTime()) / (1000 * 60 * 60 * 24));
       
       // Check if URL is expired
-      const isExpired = url.expiresAt ? new Date() > url.expiresAt : false;
+      const isExpired = urlWithProperDates.expiresAt ? new Date() > urlWithProperDates.expiresAt : false;
       
       logger.debug('URL stats retrieved', { slug, totalClickCount });
       
       // Return UrlStatsDto with all required fields
       return {
-        id: url.id,
-        originalUrl: url.originalUrl,
-        shortSlug: url.shortSlug,
-        shortUrl: `${config.server.baseUrl}/${url.shortSlug}`,
+        id: urlWithProperDates.id,
+        originalUrl: urlWithProperDates.originalUrl,
+        shortSlug: urlWithProperDates.shortSlug,
+        shortUrl: `${config.server.baseUrl}/${urlWithProperDates.shortSlug}`,
         clickCount: totalClickCount,
-        createdAt: url.createdAt,
-        updatedAt: url.updatedAt,
-        expiresAt: url.expiresAt,
+        createdAt: urlWithProperDates.createdAt,
+        updatedAt: urlWithProperDates.updatedAt,
+        expiresAt: urlWithProperDates.expiresAt,
         isExpired,
         daysSinceCreation,
-        userId: url.userId,
+        userId: urlWithProperDates.userId,
       };
 
     } catch (error) {
@@ -283,7 +305,8 @@ export class UrlService implements IUrlService {
       const cachedUrls = await this.cacheService.getCachedPopularUrls();
       if (cachedUrls) {
         logger.debug('Popular URLs retrieved from cache', { count: cachedUrls.length });
-        return cachedUrls;
+        // Ensure Date fields are properly converted from strings (when retrieved from cache)
+        return cachedUrls.map(url => this.ensureDateFields(url));
       }
 
       // Get from database
@@ -317,7 +340,8 @@ export class UrlService implements IUrlService {
       const cachedUrls = await this.cacheService.getCachedRecentUrls();
       if (cachedUrls) {
         logger.debug('Recent URLs retrieved from cache', { count: cachedUrls.length });
-        return cachedUrls;
+        // Ensure Date fields are properly converted from strings (when retrieved from cache)
+        return cachedUrls.map(url => this.ensureDateFields(url));
       }
 
       // Get from database

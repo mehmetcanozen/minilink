@@ -1,6 +1,4 @@
-<!-- Enhanced URL Stats Page -->
 <div class="stats-page">
-    <!-- Hero Section with Gradient Background -->
     <section class="stats-hero">
         <div class="hero-background">
             <div class="gradient-overlay"></div>
@@ -21,32 +19,74 @@
                     <p class="hero-subtitle">Comprehensive insights for your shortened link</p>
                 </div>
                 
-                <!-- Main URL Card -->
-                <div class="main-url-card">
-                    <div class="url-info">
-                        <div class="url-display">
-                            <div class="url-label">Short URL</div>
-                            <div class="url-input-group">
-                                <input type="text" class="url-input" value="<%= shortUrl %>" readonly>
-                                <div class="url-actions">
-                                    <button class="action-btn copy-btn" onclick="copyToClipboard('<%= shortUrl %>')" title="Copy URL">
+                <div class="main-url-card-new">
+                    <div class="url-display-section">
+                        <div class="url-header">
+                            <div class="url-icon">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <div class="url-title">
+                                <h3>Your Shortened URL</h3>
+                                <p>Share this link with others</p>
+                            </div>
+                        </div>
+                        
+                        <div class="url-content">
+                            <div class="url-box">
+                                <div class="url-text-display">
+                                    <span class="url-protocol">https://</span>
+                                    <span class="url-domain">localhost:3000/</span>
+                                    <span class="url-slug"><%= slug %></span>
+                                    <div class="url-full-fallback" style="display: none; margin-top: 0.5rem; font-size: 0.875rem; color: #64748b;">
+                                        <%= shortUrl %>
+                                    </div>
+                                </div>
+                                <div class="url-actions-new">
+                                    <button class="action-btn-new copy-btn-new" onclick="copyToClipboard('<%= shortUrl %>')" title="Copy URL">
                                         <i class="fas fa-copy"></i>
+                                        <span>Copy</span>
                                     </button>
-                                    <a href="<%= shortUrl %>" target="_blank" class="action-btn visit-btn" title="Visit URL">
+                                    <a href="<%= shortUrl %>" target="_blank" class="action-btn-new visit-btn-new" title="Visit URL">
                                         <i class="fas fa-external-link-alt"></i>
+                                        <span>Visit</span>
                                     </a>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="click-stats">
-                            <div class="click-number">
-                                <span class="number"><%= urlStats.clickCount %></span>
-                                <span class="label">Total Clicks</span>
+                    </div>
+                    
+                    <div class="stats-section">
+                        <div class="stats-header">
+                            <div class="stats-icon">
+                                <i class="fas fa-chart-bar"></i>
                             </div>
-                            <div class="click-trend">
-                                <i class="fas fa-trending-up"></i>
-                                <span>Live tracking</span>
+                            <div class="stats-title">
+                                <h3>Performance</h3>
+                                <p>Real-time tracking</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stats-content">
+                            <div class="stat-card-main">
+                                <div class="stat-number">
+                                    <span class="big-number"><%= urlStats.clickCount %></span>
+                                    <span class="stat-label">Total Clicks</span>
+                                </div>
+                                <div class="stat-indicator">
+                                    <div class="indicator-dot"></div>
+                                    <span>Live</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-details">
+                                <div class="detail-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>Created: <%= urlStats.createdAt ? new Date(urlStats.createdAt).toLocaleDateString() : 'Unknown' %></span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Last click: <%= urlStats.updatedAt ? new Date(urlStats.updatedAt).toLocaleDateString() : 'Never' %></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -55,13 +95,10 @@
         </div>
     </section>
 
-    <!-- Stats Dashboard -->
     <section class="stats-dashboard">
         <div class="container">
             <div class="dashboard-grid">
-                <!-- Left Column - URL Details -->
                 <div class="dashboard-main">
-                    <!-- URL Details Card -->
                     <div class="detail-card">
                         <div class="card-header">
                             <div class="header-icon">
@@ -74,7 +111,6 @@
                         </div>
                         
                         <div class="card-body">
-                            <!-- Original URL Section -->
                             <div class="url-section">
                                 <label class="section-label">Original URL</label>
                                 <div class="original-url-display">
@@ -93,7 +129,6 @@
                                 </div>
                             </div>
 
-                            <!-- Stats Grid -->
                             <div class="stats-grid">
                                 <div class="stat-item created">
                                     <div class="stat-icon">
@@ -102,17 +137,17 @@
                                     <div class="stat-content">
                                         <div class="stat-label">Created</div>
                                         <div class="stat-value" id="createdDate">
-                                            <%= new Date(urlStats.createdAt).toLocaleDateString('en-US', {
+                                            <%= urlStats.createdAt ? new Date(urlStats.createdAt).toLocaleDateString('en-US', {
                                                 year: 'numeric',
                                                 month: 'short',
                                                 day: 'numeric'
-                                            }) %>
+                                            }) : 'Unknown' %>
                                         </div>
                                         <div class="stat-time">
-                                            <%= new Date(urlStats.createdAt).toLocaleTimeString('en-US', {
+                                            <%= urlStats.createdAt ? new Date(urlStats.createdAt).toLocaleTimeString('en-US', {
                                                 hour: '2-digit',
                                                 minute: '2-digit'
-                                            }) %>
+                                            }) : 'Unknown' %>
                                         </div>
                                     </div>
                                 </div>
@@ -124,17 +159,17 @@
                                     <div class="stat-content">
                                         <div class="stat-label">Last Click</div>
                                         <div class="stat-value" id="updatedDate">
-                                            <%= new Date(urlStats.updatedAt).toLocaleDateString('en-US', {
+                                            <%= urlStats.updatedAt ? new Date(urlStats.updatedAt).toLocaleDateString('en-US', {
                                                 year: 'numeric',
                                                 month: 'short',
                                                 day: 'numeric'
-                                            }) %>
+                                            }) : 'Never' %>
                                         </div>
                                         <div class="stat-time">
-                                            <%= new Date(urlStats.updatedAt).toLocaleTimeString('en-US', {
+                                            <%= urlStats.updatedAt ? new Date(urlStats.updatedAt).toLocaleTimeString('en-US', {
                                                 hour: '2-digit',
                                                 minute: '2-digit'
-                                            }) %>
+                                            }) : 'Never' %>
                                         </div>
                                     </div>
                                 </div>
@@ -147,24 +182,23 @@
                                     <div class="stat-content">
                                         <div class="stat-label">Expires</div>
                                         <div class="stat-value" id="expiresDate">
-                                            <%= new Date(urlStats.expiresAt).toLocaleDateString('en-US', {
+                                            <%= urlStats.expiresAt ? new Date(urlStats.expiresAt).toLocaleDateString('en-US', {
                                                 year: 'numeric',
                                                 month: 'short',
                                                 day: 'numeric'
-                                            }) %>
+                                            }) : 'Never' %>
                                         </div>
                                         <div class="stat-time">
-                                            <%= new Date(urlStats.expiresAt).toLocaleTimeString('en-US', {
+                                            <%= urlStats.expiresAt ? new Date(urlStats.expiresAt).toLocaleTimeString('en-US', {
                                                 hour: '2-digit',
                                                 minute: '2-digit'
-                                            }) %>
+                                            }) : 'Never' %>
                                         </div>
                                     </div>
                                 </div>
                                 <% } %>
                             </div>
 
-                            <!-- URL ID Section -->
                             <div class="url-id-section">
                                 <label class="section-label">URL ID (for API usage)</label>
                                 <div class="id-display">
@@ -178,9 +212,7 @@
                     </div>
                 </div>
 
-                <!-- Right Column - Actions & Insights -->
                 <div class="dashboard-sidebar">
-                    <!-- QR Code Card -->
                     <div class="qr-card">
                         <div class="card-header">
                             <div class="header-icon">
@@ -196,7 +228,7 @@
                             <div class="qr-display">
                                 <div class="qr-container">
                                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<%= encodeURIComponent(shortUrl) %>" 
-                                         alt="QR Code" class="qr-image">
+                                        alt="QR Code" class="qr-image">
                                 </div>
                                 <div class="qr-actions">
                                     <button class="qr-btn primary" onclick="showQRModal()">
@@ -212,7 +244,6 @@
                         </div>
                     </div>
 
-                    <!-- Quick Actions Card -->
                     <div class="actions-card">
                         <div class="card-header">
                             <div class="header-icon">
@@ -259,7 +290,6 @@
                         </div>
                     </div>
 
-                    <!-- Performance Insights Card -->
                     <div class="insights-card">
                         <div class="card-header">
                             <div class="header-icon">
@@ -273,7 +303,7 @@
                         
                         <div class="card-body">
                             <% 
-                            const daysSinceCreated = Math.max(1, Math.floor((new Date() - new Date(urlStats.createdAt)) / (1000 * 60 * 60 * 24)));
+                            const daysSinceCreated = urlStats.createdAt ? Math.max(1, Math.floor((new Date() - new Date(urlStats.createdAt)) / (1000 * 60 * 60 * 24))) : 1;
                             const avgClicksPerDay = (urlStats.clickCount / daysSinceCreated).toFixed(1);
                             const progressWidth = Math.min(avgClicksPerDay * 10, 100);
                             %>
@@ -285,7 +315,8 @@
                                 </div>
                                 <div class="progress-container">
                                     <div class="progress-bar">
-                                        <div class="progress-fill" style="width: 0%;" data-width="<%= progressWidth %>"></div>
+                                        <div class="progress-fill" style="width: 0%;"
+                                        data-width="<%= progressWidth %>"></div>
                                     </div>
                                 </div>
                             </div>
@@ -299,7 +330,6 @@
                                 </div>
                             </div>
 
-                            <!-- Performance Status -->
                             <div class="performance-status">
                                 <% if (urlStats.clickCount === 0) { %>
                                     <div class="status-item info">
@@ -341,7 +371,6 @@
     </section>
 </div>
 
-<!-- Enhanced QR Code Modal -->
 <div class="modal fade" id="qrModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -356,7 +385,7 @@
                 <div class="qr-modal-content">
                     <div class="qr-display-large">
                         <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=<%= encodeURIComponent(shortUrl) %>" 
-                             alt="QR Code" class="qr-image-large">
+                            alt="QR Code" class="qr-image-large">
                     </div>
                     <div class="qr-info">
                         <p class="qr-description">Scan this QR code to access:</p>
@@ -380,7 +409,6 @@
     </div>
 </div>
 
-<!-- Enhanced Toast Container -->
 <div class="toast-container">
     <div id="toast" class="toast" role="alert">
         <div class="toast-header">
@@ -396,7 +424,6 @@
     </div>
 </div>
 
-<!-- Page Scripts -->
 <script>
 // Enhanced copy to clipboard function
 async function copyToClipboard(text) {
@@ -481,6 +508,45 @@ function showToast(message, type = 'success') {
 
 // Initialize page animations
 document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced URL display for new layout
+    const urlTextDisplay = document.querySelector('.url-text-display');
+    const urlSlug = document.querySelector('.url-slug');
+    
+    if (urlTextDisplay && urlSlug) {
+        // Ensure the URL slug is properly displayed
+        urlSlug.textContent = '<%= slug %>';
+        
+        // Check if the slug is displaying properly
+        setTimeout(() => {
+            if (!urlSlug.textContent || urlSlug.textContent.trim() === '') {
+                // Show fallback if slug is empty
+                const fallback = urlTextDisplay.querySelector('.url-full-fallback');
+                if (fallback) {
+                    fallback.style.display = 'block';
+                }
+            }
+        }, 100);
+        
+        // Add click to copy functionality for the entire URL display
+        urlTextDisplay.addEventListener('click', function() {
+            copyToClipboard('<%= shortUrl %>');
+        });
+        
+        // Add visual feedback for click
+        urlTextDisplay.style.cursor = 'pointer';
+        urlTextDisplay.title = 'Click to copy URL';
+        
+        // Add hover effect
+        urlTextDisplay.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.02)';
+            this.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
+        });
+        urlTextDisplay.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+            this.style.boxShadow = 'none';
+        });
+    }
+
     // Animate progress bars
     const progressBars = document.querySelectorAll('.progress-fill[data-width]');
     progressBars.forEach(bar => {
@@ -489,13 +555,11 @@ document.addEventListener('DOMContentLoaded', function() {
             bar.style.width = width + '%';
         }, 500);
     });
-
     // Add scroll animations
     const observerOptions = {
         threshold: 0.1,
         rootMargin: '0px 0px -50px 0px'
     };
-
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -503,9 +567,62 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }, observerOptions);
-
     document.querySelectorAll('.detail-card, .qr-card, .actions-card, .insights-card').forEach(card => {
         observer.observe(card);
     });
+    // Add hover effects for action buttons
+    const actionButtons = document.querySelectorAll('.action-btn');
+    actionButtons.forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px) scale(1.05)';
+        });
+        
+        btn.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+    // Enhanced stats display
+    const bigNumber = document.querySelector('.big-number');
+    const indicatorDot = document.querySelector('.indicator-dot');
+    if (bigNumber) {
+        // Animate the number on load
+        const finalNumber = parseInt(bigNumber.textContent);
+        let currentNumber = 0;
+        const increment = Math.max(1, Math.floor(finalNumber / 20));
+        const animateNumber = () => {
+            if (currentNumber < finalNumber) {
+                currentNumber = Math.min(currentNumber + increment, finalNumber);
+                bigNumber.textContent = currentNumber;
+                setTimeout(animateNumber, 50);
+            }
+        };
+        
+        setTimeout(animateNumber, 500);
+    }
+    
+    // Auto-refresh stats every 30 seconds
+    setInterval(() => {
+        // Only refresh if the page is visible
+        if (!document.hidden) {
+            // Update the live indicator
+            if (indicatorDot) {
+                indicatorDot.style.animation = 'none';
+        
+                setTimeout(() => {
+                    indicatorDot.style.animation = 'pulse 2s infinite';
+                }, 10);
+            }
+            
+            // You can implement a more sophisticated refresh here
+            // For now, we'll just update the timestamp
+            const now = new Date();
+            const timeElements = document.querySelectorAll('.stat-time');
+            timeElements.forEach(el => {
+                if (el.textContent.includes('Live tracking')) {
+                    el.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> <span>Updated ${now.toLocaleTimeString()}</span>`;
+                }
+            });
+        }
+    }, 30000);
 });
-</script> 
+</script>
