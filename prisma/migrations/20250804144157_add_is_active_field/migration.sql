@@ -4,6 +4,7 @@ CREATE TABLE "urls" (
     "original_url" TEXT NOT NULL,
     "short_slug" VARCHAR(20) NOT NULL,
     "click_count" INTEGER NOT NULL DEFAULT 0,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expires_at" TIMESTAMPTZ,
@@ -29,3 +30,6 @@ CREATE INDEX "idx_urls_expires_at" ON "urls"("expires_at");
 
 -- CreateIndex
 CREATE INDEX "idx_urls_user_id" ON "urls"("user_id");
+
+-- CreateIndex
+CREATE INDEX "idx_urls_is_active" ON "urls"("is_active");

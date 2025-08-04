@@ -1,5 +1,5 @@
 import { UrlService } from '../../../src/services/UrlService';
-import { UrlRepository } from '../../../src/repositories/UrlRepository';
+import { PrismaUrlRepository } from '../../../src/repositories/PrismaUrlRepository';
 import { CacheService } from '../../../src/services/CacheService';
 import { 
   InvalidUrlError,
@@ -11,19 +11,19 @@ import {
 import { mockUrls } from '../../fixtures/urls';
 
 // Mock the dependencies
-jest.mock('../../../src/repositories/UrlRepository');
+jest.mock('../../../src/repositories/PrismaUrlRepository');
 jest.mock('../../../src/services/CacheService');
 
 describe('UrlService', () => {
   let urlService: UrlService;
-  let mockRepository: jest.Mocked<UrlRepository>;
+  let mockRepository: jest.Mocked<PrismaUrlRepository>;
 
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
     
     // Create mock repository
-    mockRepository = new UrlRepository() as jest.Mocked<UrlRepository>;
+    mockRepository = new PrismaUrlRepository() as jest.Mocked<PrismaUrlRepository>;
     
     // Mock the methods we need
     mockRepository.create = jest.fn();

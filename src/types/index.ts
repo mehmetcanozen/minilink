@@ -8,6 +8,7 @@ export interface UrlEntity {
   originalUrl: string;
   shortSlug: string;
   clickCount: number;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   expiresAt?: Date; // Optional expiration date

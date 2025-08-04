@@ -88,13 +88,21 @@ export class ViewController {
         return;
       }
 
+      // Ensure dates are properly formatted for the template
+      const formattedUrlStats = {
+        ...urlStats,
+        createdAt: urlStats.createdAt instanceof Date ? urlStats.createdAt.toISOString() : urlStats.createdAt,
+        updatedAt: urlStats.updatedAt instanceof Date ? urlStats.updatedAt.toISOString() : urlStats.updatedAt,
+        expiresAt: urlStats.expiresAt instanceof Date ? urlStats.expiresAt.toISOString() : urlStats.expiresAt
+      };
+
       logger.info('URL stats page rendered successfully', { slug });
 
       res.render('layout', {
         title: `Stats for ${slug}`,
         currentPage: 'stats',
         body: await renderTemplate('url-stats', {
-          urlStats,
+          urlStats: formattedUrlStats,
           slug,
           shortUrl: `${serverConfig.baseUrl}/${slug}`,
           baseUrl: serverConfig.baseUrl
@@ -181,6 +189,9 @@ function sanitizeTemplateData(data: Record<string, unknown>): Record<string, unk
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
         .replace(/javascript:/gi, '')
         .replace(/on\w+\s*=/gi, '');
+    } else if (value instanceof Date) {
+      // Convert Date objects to ISO strings for template rendering
+      sanitized[key] = value.toISOString();
     } else if (typeof value === 'object' && value !== null) {
       // Recursively sanitize nested objects
       sanitized[key] = sanitizeTemplateData(value as Record<string, unknown>);

@@ -70,18 +70,31 @@
                     </label>
                     <div class="expiration-grid">
                         <div class="form-check enhanced">
-                            <input type="radio" name="expiration" value="none" id="expNone" class="form-check-input" checked>
-                            <label for="expNone" class="form-check-label">
+                            <input type="radio" name="expiration" value="1min" id="exp1min" class="form-check-input" checked>
+                            <label for="exp1min" class="form-check-label">
                                 <div class="check-icon">
-                                    <i class="fas fa-infinity"></i>
+                                    <i class="fas fa-clock"></i>
                                 </div>
                                 <div class="check-content">
-                                    <div class="check-title">Never Expire</div>
-                                    <div class="check-subtitle">Link stays active forever</div>
+                                    <div class="check-title">1 Minute</div>
+                                    <div class="check-subtitle">Expires in 1 minute</div>
                                 </div>
                             </label>
                         </div>
                         
+                        <div class="form-check enhanced">
+                            <input type="radio" name="expiration" value="1h" id="exp1h" class="form-check-input">
+                            <label for="exp1h" class="form-check-label">
+                                <div class="check-icon">
+                                    <i class="fas fa-hourglass-half"></i>
+                                </div>
+                                <div class="check-content">
+                                    <div class="check-title">1 Hour</div>
+                                    <div class="check-subtitle">Expires in 1 hour</div>
+                                </div>
+                            </label>
+                        </div>
+
                         <div class="form-check enhanced">
                             <input type="radio" name="expiration" value="1d" id="exp1d" class="form-check-input">
                             <label for="exp1d" class="form-check-label">
@@ -120,41 +133,9 @@
                                 </div>
                             </label>
                         </div>
-                        
-                        <div class="form-check enhanced">
-                            <input type="radio" name="expiration" value="custom" id="expCustom" class="form-check-input">
-                            <label for="expCustom" class="form-check-label">
-                                <div class="check-icon">
-                                    <i class="fas fa-calendar-plus"></i>
-                                </div>
-                                <div class="check-content">
-                                    <div class="check-title">Custom Date</div>
-                                    <div class="check-subtitle">Choose specific date</div>
-                                </div>
-                            </label>
-                        </div>
                     </div>
 
-                    <!-- Custom Date Input -->
-                    <div class="custom-date-container" id="customDateContainer" style="display: none;">
-                        <div class="date-input-group">
-                            <label for="customExpirationDate" class="date-label">
-                                <i class="fas fa-calendar"></i>
-                                Expiration Date
-                            </label>
-                            <input 
-                                type="datetime-local" 
-                                id="customExpirationDate" 
-                                name="customExpirationDate" 
-                                class="date-input"
-                                min="<%= new Date().toISOString().slice(0, 16) %>"
-                            >
-                        </div>
-                        <p class="date-help">
-                            <i class="fas fa-info-circle"></i>
-                            Choose a future date and time for expiration
-                        </p>
-                    </div>
+
                 </div>
 
                 <div class="form-footer">
@@ -421,27 +402,10 @@ class URLShortener {
         this.loadingState = document.getElementById('loadingState');
         this.successCard = document.getElementById('successCard');
         this.errorSection = document.getElementById('errorSection');
-        this.customDateContainer = document.getElementById('customDateContainer');
-        this.expirationInputs = document.querySelectorAll('input[name="expiration"]');
-        this.customDateInput = document.getElementById('customExpirationDate');
     }
 
     bindEvents() {
         this.form.addEventListener('submit', (e) => this.handleSubmit(e));
-        this.expirationInputs.forEach(input => {
-            input.addEventListener('change', () => this.handleExpirationChange());
-        });
-    }
-
-    handleExpirationChange() {
-        const selectedValue = document.querySelector('input[name="expiration"]:checked').value;
-        if (selectedValue === 'custom') {
-            this.customDateContainer.style.display = 'block';
-            this.customDateInput.required = true;
-        } else {
-            this.customDateContainer.style.display = 'none';
-            this.customDateInput.required = false;
-        }
     }
 
     async handleSubmit(e) {
@@ -463,18 +427,9 @@ class URLShortener {
         };
 
         // Handle expiration
-        if (expiration && expiration !== 'none') {
-            if (expiration === 'custom') {
-                const customDate = formData.get('customExpirationDate');
-                if (!customDate) {
-                    this.showError('Please select an expiration date');
-                    return;
-                }
-                requestData.expiresAt = new Date(customDate).toISOString();
-            } else {
-                const expirationDate = this.calculateExpirationDate(expiration);
-                requestData.expiresAt = expirationDate.toISOString();
-            }
+        if (expiration) {
+            const expirationDate = this.calculateExpirationDate(expiration);
+            requestData.expiresAt = expirationDate.toISOString();
         }
 
         this.showLoading();
@@ -507,6 +462,10 @@ class URLShortener {
     calculateExpirationDate(expiration) {
         const now = new Date();
         switch (expiration) {
+            case '1min':
+                return new Date(now.getTime() + 60 * 1000);
+            case '1h':
+                return new Date(now.getTime() + 60 * 60 * 1000);
             case '1d':
                 return new Date(now.getTime() + 24 * 60 * 60 * 1000);
             case '1w':

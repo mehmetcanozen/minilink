@@ -115,6 +115,16 @@ router.get('/stats',
   })
 );
 
+// Get individual URL statistics (authenticated)
+router.get('/urls/:slug/stats', 
+  generalRateLimit, 
+  requireUser,
+  asyncHandler(async (req, res) => {
+    const { urlController } = getControllers();
+    await urlController.getUrlStats(req, res);
+  })
+);
+
 // Get popular URLs (authenticated)
 router.get('/urls/popular', 
   generalRateLimit, 

@@ -8,3 +8,4 @@ dist
 reviews
 .cursor/
 /generated/prisma
+acli.exe

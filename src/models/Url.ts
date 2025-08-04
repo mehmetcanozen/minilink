@@ -5,6 +5,7 @@ export class Url implements UrlEntity {
   originalUrl: string;
   shortSlug: string;
   clickCount: number;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   expiresAt?: Date;
@@ -16,6 +17,7 @@ export class Url implements UrlEntity {
     this.originalUrl = data.originalUrl;
     this.shortSlug = data.shortSlug;
     this.clickCount = data.clickCount;
+    this.isActive = data.isActive;
     this.createdAt = data.createdAt;
     this.updatedAt = data.updatedAt;
     this.expiresAt = data.expiresAt;
@@ -36,6 +38,7 @@ export class Url implements UrlEntity {
       originalUrl: Url.normalizeUrl(originalUrl),
       shortSlug,
       clickCount: 0,
+      isActive: true, // New URLs are always active
       expiresAt: expiresAt || undefined,
       userId: userId || undefined,
     };
@@ -48,6 +51,7 @@ export class Url implements UrlEntity {
       originalUrl: row.original_url as string,
       shortSlug: row.short_slug as string,
       clickCount: parseInt(row.click_count as string, 10),
+      isActive: (row.is_active as boolean) ?? true, // Default to true if not present
       createdAt: new Date(row.created_at as string),
       updatedAt: new Date(row.updated_at as string),
       expiresAt: row.expires_at ? new Date(row.expires_at as string) : undefined,

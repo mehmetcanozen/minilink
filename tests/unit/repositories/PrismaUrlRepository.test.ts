@@ -42,6 +42,7 @@ describe('PrismaUrlRepository', () => {
         originalUrl: 'https://example.com/long-url',
         shortSlug: 'abc123',
         clickCount: 0,
+        isActive: true,
         userId: 'user123'
       };
 
@@ -86,7 +87,8 @@ describe('PrismaUrlRepository', () => {
       const urlData = {
         originalUrl: 'https://example.com/long-url',
         shortSlug: 'abc123',
-        clickCount: 0
+        clickCount: 0,
+        isActive: true
       };
 
       const prismaError = {
@@ -535,12 +537,14 @@ describe('PrismaUrlRepository', () => {
           originalUrl: 'https://example.com/url1',
           shortSlug: 'abc123',
           clickCount: 0,
+          isActive: true,
           userId: 'user123'
         },
         {
           originalUrl: 'https://example.com/url2',
           shortSlug: 'def456',
           clickCount: 0,
+          isActive: true,
           userId: 'user123'
         }
       ];

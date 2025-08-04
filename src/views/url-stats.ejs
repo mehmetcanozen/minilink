@@ -81,11 +81,33 @@
                             <div class="stat-details">
                                 <div class="detail-item">
                                     <i class="fas fa-calendar"></i>
-                                    <span>Created: <%= urlStats.createdAt ? new Date(urlStats.createdAt).toLocaleDateString() : 'Unknown' %></span>
+                                    <span>Created: <span id="createdDateDisplay">
+                                        <% if (urlStats.createdAt) { %>
+                                            <% const createdDate = new Date(urlStats.createdAt); %>
+                                            <% if (!isNaN(createdDate.getTime())) { %>
+                                                <%= createdDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
+                                            <% } else { %>
+                                                Unknown (Raw: <%= urlStats.createdAt %>)
+                                            <% } %>
+                                        <% } else { %>
+                                            Unknown
+                                        <% } %>
+                                    </span></span>
                                 </div>
                                 <div class="detail-item">
                                     <i class="fas fa-clock"></i>
-                                    <span>Last click: <%= urlStats.updatedAt ? new Date(urlStats.updatedAt).toLocaleDateString() : 'Never' %></span>
+                                    <span>Last click: <span id="lastClickDisplay">
+                                        <% if (urlStats.updatedAt) { %>
+                                            <% const updatedDate = new Date(urlStats.updatedAt); %>
+                                            <% if (!isNaN(updatedDate.getTime())) { %>
+                                                <%= updatedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
+                                            <% } else { %>
+                                                Never (Raw: <%= urlStats.updatedAt %>)
+                                            <% } %>
+                                        <% } else { %>
+                                            Never
+                                        <% } %>
+                                    </span></span>
                                 </div>
                             </div>
                         </div>
@@ -137,17 +159,28 @@
                                     <div class="stat-content">
                                         <div class="stat-label">Created</div>
                                         <div class="stat-value" id="createdDate">
-                                            <%= urlStats.createdAt ? new Date(urlStats.createdAt).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            }) : 'Unknown' %>
+                                            <% if (urlStats.createdAt) { %>
+                                                <% const createdDate = new Date(urlStats.createdAt); %>
+                                                <% if (!isNaN(createdDate.getTime())) { %>
+                                                    <%= createdDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
+                                                <% } else { %>
+                                                    Unknown
+                                                <% } %>
+                                            <% } else { %>
+                                                Unknown
+                                            <% } %>
                                         </div>
                                         <div class="stat-time">
-                                            <%= urlStats.createdAt ? new Date(urlStats.createdAt).toLocaleTimeString('en-US', {
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            }) : 'Unknown' %>
+                                            <% if (urlStats.createdAt) { %>
+                                                <% const createdDate = new Date(urlStats.createdAt); %>
+                                                <% if (!isNaN(createdDate.getTime())) { %>
+                                                    <%= createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) %>
+                                                <% } else { %>
+                                                    Unknown
+                                                <% } %>
+                                            <% } else { %>
+                                                Unknown
+                                            <% } %>
                                         </div>
                                     </div>
                                 </div>
@@ -159,17 +192,28 @@
                                     <div class="stat-content">
                                         <div class="stat-label">Last Click</div>
                                         <div class="stat-value" id="updatedDate">
-                                            <%= urlStats.updatedAt ? new Date(urlStats.updatedAt).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            }) : 'Never' %>
+                                            <% if (urlStats.updatedAt) { %>
+                                                <% const updatedDate = new Date(urlStats.updatedAt); %>
+                                                <% if (!isNaN(updatedDate.getTime())) { %>
+                                                    <%= updatedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
+                                                <% } else { %>
+                                                    Never
+                                                <% } %>
+                                            <% } else { %>
+                                                Never
+                                            <% } %>
                                         </div>
                                         <div class="stat-time">
-                                            <%= urlStats.updatedAt ? new Date(urlStats.updatedAt).toLocaleTimeString('en-US', {
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            }) : 'Never' %>
+                                            <% if (urlStats.updatedAt) { %>
+                                                <% const updatedDate = new Date(urlStats.updatedAt); %>
+                                                <% if (!isNaN(updatedDate.getTime())) { %>
+                                                    <%= updatedDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) %>
+                                                <% } else { %>
+                                                    Never
+                                                <% } %>
+                                            <% } else { %>
+                                                Never
+                                            <% } %>
                                         </div>
                                     </div>
                                 </div>
@@ -182,17 +226,28 @@
                                     <div class="stat-content">
                                         <div class="stat-label">Expires</div>
                                         <div class="stat-value" id="expiresDate">
-                                            <%= urlStats.expiresAt ? new Date(urlStats.expiresAt).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            }) : 'Never' %>
+                                            <% if (urlStats.expiresAt) { %>
+                                                <% const expiresDate = new Date(urlStats.expiresAt); %>
+                                                <% if (!isNaN(expiresDate.getTime())) { %>
+                                                    <%= expiresDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
+                                                <% } else { %>
+                                                    Never
+                                                <% } %>
+                                            <% } else { %>
+                                                Never
+                                            <% } %>
                                         </div>
                                         <div class="stat-time">
-                                            <%= urlStats.expiresAt ? new Date(urlStats.expiresAt).toLocaleTimeString('en-US', {
-                                                hour: '2-digit',
-                                                minute: '2-digit'
-                                            }) : 'Never' %>
+                                            <% if (urlStats.expiresAt) { %>
+                                                <% const expiresDate = new Date(urlStats.expiresAt); %>
+                                                <% if (!isNaN(expiresDate.getTime())) { %>
+                                                    <%= expiresDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) %>
+                                                <% } else { %>
+                                                    Never
+                                                <% } %>
+                                            <% } else { %>
+                                                Never
+                                            <% } %>
                                         </div>
                                     </div>
                                 </div>
@@ -303,15 +358,36 @@
                         
                         <div class="card-body">
                             <% 
-                            const daysSinceCreated = urlStats.createdAt ? Math.max(1, Math.floor((new Date() - new Date(urlStats.createdAt)) / (1000 * 60 * 60 * 24))) : 1;
-                            const avgClicksPerDay = (urlStats.clickCount / daysSinceCreated).toFixed(1);
-                            const progressWidth = Math.min(avgClicksPerDay * 10, 100);
+                            let daysSinceCreated = 1;
+                            let avgClicksPerDay = 0;
+                            let progressWidth = 0;
+                            
+                            if (urlStats.createdAt) {
+                                const createdDate = new Date(urlStats.createdAt);
+                                if (!isNaN(createdDate.getTime())) {
+                                    daysSinceCreated = Math.max(1, Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24)));
+                                }
+                            }
+                            
+                            if (daysSinceCreated > 0 && !isNaN(daysSinceCreated)) {
+                                avgClicksPerDay = (urlStats.clickCount / daysSinceCreated);
+                                if (!isNaN(avgClicksPerDay)) {
+                                    avgClicksPerDay = parseFloat(avgClicksPerDay.toFixed(1));
+                                    progressWidth = Math.min(avgClicksPerDay * 10, 100);
+                                }
+                            }
                             %>
                             
                             <div class="insight-item">
                                 <div class="insight-header">
                                     <span class="insight-label">Daily Average</span>
-                                    <span class="insight-value"><%= avgClicksPerDay %> clicks</span>
+                                    <span class="insight-value" id="avgClicksDisplay">
+                                        <% if (!isNaN(avgClicksPerDay) && avgClicksPerDay >= 0) { %>
+                                            <%= avgClicksPerDay %> clicks
+                                        <% } else { %>
+                                            0 clicks
+                                        <% } %>
+                                    </span>
                                 </div>
                                 <div class="progress-container">
                                     <div class="progress-bar">
@@ -324,8 +400,12 @@
                             <div class="insight-item">
                                 <div class="insight-header">
                                     <span class="insight-label">Link Age</span>
-                                    <span class="insight-value">
+                                    <span class="insight-value" id="linkAgeDisplay">
+                                        <% if (!isNaN(daysSinceCreated) && daysSinceCreated > 0) { %>
                                         <%= daysSinceCreated %> <%= daysSinceCreated === 1 ? 'day' : 'days' %>
+                                        <% } else { %>
+                                            1 day
+                                        <% } %>
                                     </span>
                                 </div>
                             </div>
@@ -600,29 +680,157 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(animateNumber, 500);
     }
     
-    // Auto-refresh stats every 30 seconds
+    // Real-time stats update function
+    async function updateStats() {
+        try {
+            const response = await fetch(`/api/urls/${encodeURIComponent('<%= slug %>')}/stats`);
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Update click count
+                const bigNumber = document.querySelector('.big-number');
+                if (bigNumber && data.clickCount !== undefined) {
+                    bigNumber.textContent = data.clickCount;
+                }
+                
+                // Update last click time
+                if (data.updatedAt) {
+                    const updatedDate = new Date(data.updatedAt);
+                    if (!isNaN(updatedDate.getTime())) {
+                        const lastClickDisplay = document.getElementById('lastClickDisplay');
+                        const updatedDateElement = document.getElementById('updatedDate');
+                        const updatedTimeElement = updatedDateElement?.nextElementSibling;
+                        
+                        if (lastClickDisplay) {
+                            lastClickDisplay.textContent = updatedDate.toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                            });
+                        }
+                        
+                        if (updatedDateElement) {
+                            updatedDateElement.textContent = updatedDate.toLocaleDateString('en-US', { 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                            });
+                        }
+                        
+                        if (updatedTimeElement) {
+                            updatedTimeElement.textContent = updatedDate.toLocaleTimeString('en-US', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            });
+                        }
+                    }
+                }
+                
+                // Update analytics calculations
+                if (data.createdAt) {
+                    const createdDate = new Date(data.createdAt);
+                    if (!isNaN(createdDate.getTime())) {
+                        const daysSinceCreated = Math.max(1, Math.floor((new Date() - createdDate) / (1000 * 60 * 60 * 24)));
+                        const avgClicksPerDay = data.clickCount / daysSinceCreated;
+                        
+                        const avgClicksDisplay = document.getElementById('avgClicksDisplay');
+                        const linkAgeDisplay = document.getElementById('linkAgeDisplay');
+                        
+                        if (avgClicksDisplay && !isNaN(avgClicksPerDay)) {
+                            avgClicksDisplay.textContent = `${avgClicksPerDay.toFixed(1)} clicks`;
+                        }
+                        
+                        if (linkAgeDisplay && !isNaN(daysSinceCreated)) {
+                            linkAgeDisplay.textContent = `${daysSinceCreated} ${daysSinceCreated === 1 ? 'day' : 'days'}`;
+                        }
+                    }
+                }
+                
+                // Update performance status
+                updatePerformanceStatus(data.clickCount);
+            }
+        } catch (error) {
+            console.log('Stats update failed:', error);
+        }
+    }
+    
+    // Update performance status based on click count
+    function updatePerformanceStatus(clickCount) {
+        const performanceStatus = document.querySelector('.performance-status');
+        if (!performanceStatus) return;
+        
+        // Clear existing status
+        performanceStatus.innerHTML = '';
+        
+        if (clickCount === 0) {
+            performanceStatus.innerHTML = `
+                <div class="status-item info">
+                    <div class="status-icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-title">Getting Started</div>
+                        <div class="status-message">No clicks yet. Share your URL to get started!</div>
+                    </div>
+                </div>
+            `;
+        } else if (clickCount >= 100) {
+            performanceStatus.innerHTML = `
+                <div class="status-item success">
+                    <div class="status-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-title">Popular Link!</div>
+                        <div class="status-message">This is performing exceptionally well!</div>
+                    </div>
+                </div>
+            `;
+        } else if (clickCount >= 10) {
+            performanceStatus.innerHTML = `
+                <div class="status-item good">
+                    <div class="status-icon">
+                        <i class="fas fa-thumbs-up"></i>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-title">Good Engagement</div>
+                        <div class="status-message">Keep sharing to grow your audience!</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            performanceStatus.innerHTML = `
+                <div class="status-item info">
+                    <div class="status-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-title">Growing</div>
+                        <div class="status-message">Your link is gaining traction!</div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Auto-refresh stats every 10 seconds
     setInterval(() => {
         // Only refresh if the page is visible
         if (!document.hidden) {
             // Update the live indicator
             if (indicatorDot) {
                 indicatorDot.style.animation = 'none';
-        
                 setTimeout(() => {
                     indicatorDot.style.animation = 'pulse 2s infinite';
                 }, 10);
             }
             
-            // You can implement a more sophisticated refresh here
-            // For now, we'll just update the timestamp
-            const now = new Date();
-            const timeElements = document.querySelectorAll('.stat-time');
-            timeElements.forEach(el => {
-                if (el.textContent.includes('Live tracking')) {
-                    el.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> <span>Updated ${now.toLocaleTimeString()}</span>`;
-                }
-            });
+            // Update stats
+            updateStats();
         }
-    }, 30000);
+    }, 10000);
+    
+    // Initial stats update after page load
+    setTimeout(updateStats, 2000);
 });
 </script>

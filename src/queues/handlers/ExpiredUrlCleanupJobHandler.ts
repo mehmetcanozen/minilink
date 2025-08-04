@@ -32,13 +32,13 @@ export class ExpiredUrlCleanupJobHandler {
 
       logger.info(`Found ${expiredUrls.length} expired URLs to clean up`);
 
-      // Delete expired URLs from database
-      await this.deleteExpiredUrls(expiredUrls);
+      // Deactivate expired URLs in database
+      await this.deactivateExpiredUrls(expiredUrls);
 
       // Clean up related caches
       await this.cleanupExpiredUrlCaches(expiredUrls);
 
-      logger.info(`Successfully cleaned up ${expiredUrls.length} expired URLs`);
+      logger.info(`Successfully deactivated ${expiredUrls.length} expired URLs`);
 
     } catch (error) {
       logger.error('Failed to process expired URL cleanup job', error as Error);
@@ -63,24 +63,24 @@ export class ExpiredUrlCleanupJobHandler {
     }
   }
 
-  private async deleteExpiredUrls(expiredUrls: Array<{ id: string; shortSlug: string; originalUrl: string }>): Promise<void> {
+  private async deactivateExpiredUrls(expiredUrls: Array<{ id: string; shortSlug: string; originalUrl: string }>): Promise<void> {
     try {
-      // Delete expired URLs in batches
+      // Deactivate expired URLs in batches
       const batchSize = 50;
-      let totalDeleted = 0;
+      let totalDeactivated = 0;
       
       for (let i = 0; i < expiredUrls.length; i += batchSize) {
         const batch = expiredUrls.slice(i, i + batchSize);
         
-        const deletedCount = await this.urlRepository.deleteExpiredUrls();
-        totalDeleted += deletedCount;
+        const deactivatedCount = await this.urlRepository.deleteExpiredUrls();
+        totalDeactivated += deactivatedCount;
 
-        logger.debug(`Deleted batch of ${batch.length} expired URLs`, { batchIndex: i / batchSize + 1 });
+        logger.debug(`Deactivated batch of ${batch.length} expired URLs`, { batchIndex: i / batchSize + 1 });
       }
       
-      logger.info(`Total expired URLs deleted from database`, { totalDeleted });
+      logger.info(`Total expired URLs deactivated in database`, { totalDeactivated });
     } catch (error) {
-      logger.error('Failed to delete expired URLs', error as Error);
+      logger.error('Failed to deactivate expired URLs', error as Error);
       throw error;
     }
   }

@@ -6,6 +6,7 @@ export const mockUrls: UrlEntity[] = [
     originalUrl: 'https://example.com/very-long-url-path',
     shortSlug: 'abc123',
     clickCount: 5,
+    isActive: true,
     createdAt: new Date('2024-01-01T10:00:00Z'),
     updatedAt: new Date('2024-01-01T10:00:00Z'),
     userId: undefined
@@ -15,6 +16,7 @@ export const mockUrls: UrlEntity[] = [
     originalUrl: 'https://github.com/user/repository',
     shortSlug: 'gh456',
     clickCount: 0,
+    isActive: true,
     createdAt: new Date('2024-01-01T11:00:00Z'),
     updatedAt: new Date('2024-01-01T11:00:00Z'),
     userId: 'user123'
@@ -24,6 +26,7 @@ export const mockUrls: UrlEntity[] = [
     originalUrl: 'https://stackoverflow.com/questions/long-question-title',
     shortSlug: 'so789',
     clickCount: 15,
+    isActive: true,
     createdAt: new Date('2024-01-01T12:00:00Z'),
     updatedAt: new Date('2024-01-01T12:30:00Z'),
     userId: undefined

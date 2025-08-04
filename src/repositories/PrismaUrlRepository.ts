@@ -45,6 +45,7 @@ export class PrismaUrlRepository implements IUrlRepository {
           originalUrl: urlData.originalUrl,
           shortSlug: urlData.shortSlug,
           clickCount: urlData.clickCount,
+          isActive: urlData.isActive ?? true, // Default to true if not specified
           expiresAt: urlData.expiresAt || null,
           userId: urlData.userId || null,
         },
@@ -65,7 +66,52 @@ export class PrismaUrlRepository implements IUrlRepository {
     }
   }
 
+  async reuseSlug(slug: string, newUrlData: Omit<UrlEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<UrlEntity> {
+    try {
+      // First, check if the slug exists (including inactive ones)
+      const existingUrl = await this.findBySlugIncludingInactive(slug);
+      if (!existingUrl) {
+        throw new ResourceNotFoundError(`URL with slug '${slug}' not found`, slug);
+      }
+
+      // Update the existing URL with new data and reactivate it
+      const result = await this.prisma.url.update({
+        where: { shortSlug: slug },
+        data: {
+          originalUrl: newUrlData.originalUrl,
+          clickCount: 0, // Reset click count for reused slug
+          isActive: true, // Reactivate the URL
+          expiresAt: newUrlData.expiresAt || null,
+          userId: newUrlData.userId || null,
+          updatedAt: new Date(),
+        },
+      });
+
+      logger.info('Slug reused successfully', { slug, newOriginalUrl: newUrlData.originalUrl });
+      return this.mapPrismaToEntity(result);
+    } catch (error: unknown) {
+      logger.error('Error reusing slug', error as Error, { slug });
+      throw new RepositoryError(`Failed to reuse slug: ${error instanceof Error ? error.message : String(error)}`, error as Error);
+    }
+  }
+
   async findBySlug(slug: string): Promise<UrlEntity | null> {
+    try {
+      const result = await this.prisma.url.findFirst({
+        where: { 
+          shortSlug: slug,
+          isActive: true // Only return active URLs
+        },
+      });
+
+      return result ? this.mapPrismaToEntity(result) : null;
+    } catch (error: unknown) {
+      logger.error('Error finding URL by slug', error as Error, { slug });
+      throw new RepositoryError(`Failed to find URL by slug: ${error instanceof Error ? error.message : String(error)}`, error as Error);
+    }
+  }
+
+  async findBySlugIncludingInactive(slug: string): Promise<UrlEntity | null> {
     try {
       const result = await this.prisma.url.findUnique({
         where: { shortSlug: slug },
@@ -73,7 +119,7 @@ export class PrismaUrlRepository implements IUrlRepository {
 
       return result ? this.mapPrismaToEntity(result) : null;
     } catch (error: unknown) {
-      logger.error('Error finding URL by slug', error as Error, { slug });
+      logger.error('Error finding URL by slug (including inactive)', error as Error, { slug });
       throw new RepositoryError(`Failed to find URL by slug: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
@@ -277,6 +323,7 @@ export class PrismaUrlRepository implements IUrlRepository {
             not: null,
             lt: new Date(),
           },
+          isActive: true, // Only get active URLs that have expired
         },
         orderBy: { expiresAt: 'asc' },
         take: limit,
@@ -291,20 +338,24 @@ export class PrismaUrlRepository implements IUrlRepository {
 
   async deleteExpiredUrls(): Promise<number> {
     try {
-      const result = await this.prisma.url.deleteMany({
+      const result = await this.prisma.url.updateMany({
         where: {
           expiresAt: {
             not: null,
             lt: new Date(),
           },
+          isActive: true, // Only deactivate active URLs
+        },
+        data: {
+          isActive: false, // Set to inactive instead of deleting
         },
       });
 
-      logger.info('Deleted expired URLs', { count: result.count });
+      logger.info('Deactivated expired URLs', { count: result.count });
       return result.count;
     } catch (error: unknown) {
-      logger.error('Error deleting expired URLs', error as Error);
-      throw new RepositoryError(`Failed to delete expired URLs: ${error instanceof Error ? error.message : String(error)}`, error as Error);
+      logger.error('Error deactivating expired URLs', error as Error);
+      throw new RepositoryError(`Failed to deactivate expired URLs: ${error instanceof Error ? error.message : String(error)}`, error as Error);
     }
   }
 
@@ -360,6 +411,7 @@ export class PrismaUrlRepository implements IUrlRepository {
     originalUrl: string;
     shortSlug: string;
     clickCount: number;
+    isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
     expiresAt?: Date | null;
@@ -370,6 +422,7 @@ export class PrismaUrlRepository implements IUrlRepository {
       originalUrl: prismaUrl.originalUrl,
       shortSlug: prismaUrl.shortSlug,
       clickCount: prismaUrl.clickCount,
+      isActive: prismaUrl.isActive,
       createdAt: prismaUrl.createdAt,
       updatedAt: prismaUrl.updatedAt,
       expiresAt: prismaUrl.expiresAt || undefined,

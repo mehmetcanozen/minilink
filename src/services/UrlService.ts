@@ -467,11 +467,11 @@ export class UrlService implements IUrlService {
       const existingSlugChecker = async (slug: string): Promise<boolean> => {
         // Check cache first
         const cachedUrl = await this.cacheService.getCachedUrl(slug);
-        if (cachedUrl) {
-          return true; // Slug exists
+        if (cachedUrl && cachedUrl.isActive) {
+          return true; // Active slug exists
         }
 
-        // Check database
+        // Check database for active URLs only
         const existingUrl = await this.urlRepository.findBySlug(slug);
         return !!existingUrl;
       };
@@ -484,16 +484,33 @@ export class UrlService implements IUrlService {
       const existingSlugChecker = async (slug: string): Promise<boolean> => {
         // Check cache first
         const cachedUrl = await this.cacheService.getCachedUrl(slug);
-        if (cachedUrl) {
-          return true; // Slug exists
+        if (cachedUrl && cachedUrl.isActive) {
+          return true; // Active slug exists
         }
 
-        // Check database
+        // Check database for active URLs only
         const existingUrl = await this.urlRepository.findBySlug(slug);
         return !!existingUrl;
       };
 
       return generateUniqueSlug({ existingSlugChecker });
+    }
+  }
+
+  // New method to reuse an inactive slug
+  private async reuseInactiveSlug(slug: string, newUrlData: Omit<UrlEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<UrlEntity> {
+    try {
+      // Check if the repository supports slug reuse
+      if ('reuseSlug' in this.urlRepository) {
+        const reusedUrl = await (this.urlRepository as { reuseSlug: (slug: string, data: Omit<UrlEntity, 'id' | 'createdAt' | 'updatedAt'>) => Promise<UrlEntity> }).reuseSlug(slug, newUrlData);
+        logger.info('Slug reused successfully', { slug, newOriginalUrl: newUrlData.originalUrl });
+        return reusedUrl;
+      } else {
+        throw new Error('Repository does not support slug reuse');
+      }
+    } catch (error) {
+      logger.error('Error reusing slug', error as Error, { slug });
+      throw error;
     }
   }
 
